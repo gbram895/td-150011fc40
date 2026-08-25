@@ -1240,7 +1240,10 @@ async function openScanner() {
     status.textContent = 'Hold the barcode level, filling the frame';
     scanLoop(video, status);
   } catch (err) {
-    status.textContent = 'Could not access the camera — enter the barcode number instead.';
+    const name = (err && err.name) || 'UnknownError';
+    const msg = (err && err.message) || '';
+    console.error('Camera access failed:', name, msg, err);
+    status.textContent = 'Could not access the camera (' + name + ') — enter the barcode number instead.';
   }
 }
 
