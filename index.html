@@ -2,320 +2,1001 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow">
-<title>Training Dashboard</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Frost Manifest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0f1216; --card: #171b21; --border: #262c35; --text: #e8eaed;
-    --muted: #8b93a1; --accent: #4fb0ff; --accent2: #ff9f4f; --good: #4caf82;
-    --warn: #e0a942; --bad: #e0625f;
+    --bg: #eef4f6;
+    --surface: #ffffff;
+    --surface-2: #e4edf0;
+    --border: #d2e0e6;
+    --text: #142228;
+    --muted: #5c7480;
+    --accent: #1f6f78;
+    --accent-soft: rgba(31,111,120,.12);
+    --accent-contrast: #ffffff;
+    --good: #2f8f5c;
+    --good-soft: rgba(47,143,92,.13);
+    --warn: #b8790f;
+    --warn-soft: rgba(184,121,15,.15);
+    --critical: #bd463d;
+    --critical-soft: rgba(189,70,61,.13);
+    --shadow: rgba(20,40,48,.10);
   }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0a1417;
+      --surface: #101b20;
+      --surface-2: #16242a;
+      --border: #223138;
+      --text: #e7f1f3;
+      --muted: #8ea7ae;
+      --accent: #57c3cd;
+      --accent-soft: rgba(87,195,205,.16);
+      --accent-contrast: #06181b;
+      --good: #5cc491;
+      --good-soft: rgba(92,196,145,.16);
+      --warn: #e3ab52;
+      --warn-soft: rgba(227,171,82,.16);
+      --critical: #e5817a;
+      --critical-soft: rgba(229,129,122,.16);
+      --shadow: rgba(0,0,0,.45);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0a1417;
+    --surface: #101b20;
+    --surface-2: #16242a;
+    --border: #223138;
+    --text: #e7f1f3;
+    --muted: #8ea7ae;
+    --accent: #57c3cd;
+    --accent-soft: rgba(87,195,205,.16);
+    --accent-contrast: #06181b;
+    --good: #5cc491;
+    --good-soft: rgba(92,196,145,.16);
+    --warn: #e3ab52;
+    --warn-soft: rgba(227,171,82,.16);
+    --critical: #e5817a;
+    --critical-soft: rgba(229,129,122,.16);
+    --shadow: rgba(0,0,0,.45);
+  }
+
   * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
   body {
-    margin: 0; background: var(--bg); color: var(--text);
-    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-    padding: 24px; max-width: 1280px; margin-inline: auto;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Public Sans", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
   }
-  h1 { font-size: 1.4rem; margin: 0 0 4px; }
-  h2 { font-size: 1rem; margin: 0 0 14px; color: var(--muted); font-weight: 600;
-       text-transform: uppercase; letter-spacing: .04em; }
-  .meta { color: var(--muted); font-size: .85rem; margin-bottom: 24px; }
-  .countdown {
-    background: linear-gradient(135deg, #1b2530, #171b21);
-    border: 1px solid var(--border); border-radius: 14px; padding: 24px 28px;
-    margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between;
-    flex-wrap: wrap; gap: 16px;
+  .page {
+    max-width: 720px;
+    margin-inline: auto;
+    padding: 20px 16px 8px;
   }
-  .countdown .big { font-size: 3rem; font-weight: 700; color: var(--accent); line-height: 1; }
-  .countdown .label { color: var(--muted); font-size: .85rem; margin-top: 4px; }
-  .countdown .stats { display: flex; gap: 28px; flex-wrap: wrap; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 18px; }
-  .card {
-    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
-    padding: 18px 20px; margin-bottom: 18px;
+
+  .topbar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
   }
-  .card canvas { max-height: 280px; }
-  .empty-state { color: var(--muted); font-size: .9rem; padding: 30px 0; text-align: center; }
-  table { width: 100%; border-collapse: collapse; font-size: .85rem; }
-  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); }
-  th { color: var(--muted); font-weight: 600; font-size: .75rem; text-transform: uppercase; }
-  tr:hover td { background: #1c212a; }
-  .tag { display: inline-block; padding: 2px 8px; border-radius: 100px; font-size: .72rem; font-weight: 600; }
-  .tag-workout { background: rgba(224,98,95,.18); color: var(--bad); }
-  .tag-easy { background: rgba(76,175,130,.18); color: var(--good); }
-  .tag-running { color: var(--accent); }
-  .tag-cycling { color: var(--accent2); }
-  .stat-row { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 10px; }
-  .stat { min-width: 130px; }
-  .stat .v { font-size: 1.5rem; font-weight: 700; }
-  .stat .l { color: var(--muted); font-size: .78rem; }
-  .full-width { grid-column: 1 / -1; }
-  .footnote { color: var(--muted); font-size: .78rem; margin-top: 8px; }
+  .eyebrow {
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 4px;
+  }
+  h1 {
+    font-family: "Big Shoulders Display", "Arial Narrow", sans-serif;
+    font-weight: 800;
+    font-size: 2.1rem;
+    line-height: 1;
+    margin: 0;
+    letter-spacing: .01em;
+    text-wrap: balance;
+  }
+  .status-badge {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 100px;
+    font-size: .74rem;
+    font-weight: 600;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    white-space: nowrap;
+    margin-top: 2px;
+  }
+  .status-badge::before {
+    content: "";
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted);
+    flex: none;
+  }
+  .status-live::before { background: var(--good); }
+  .status-live { color: var(--good); border-color: color-mix(in srgb, var(--good) 35%, var(--border)); }
+  .status-saving::before { background: var(--warn); animation: pulse 1s ease-in-out infinite; }
+  .status-saving { color: var(--warn); }
+  .status-readonly::before { background: var(--muted); }
+  .status-offline::before { background: var(--critical); }
+  .status-offline { color: var(--critical); }
+  .status-connecting::before { background: var(--muted); animation: pulse 1s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .status-saving::before, .status-connecting::before { animation: none; } }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    box-shadow: 0 1px 2px var(--shadow);
+  }
+  .summary-value {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 600;
+    font-size: 1.4rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+  .summary-oldest-name {
+    font-family: "Public Sans", sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .summary-label {
+    font-size: .72rem;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .summary-warn .summary-value { color: var(--warn); }
+
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .search-input {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: .92rem;
+    font-family: inherit;
+  }
+  .search-input::placeholder { color: var(--muted); }
+  .search-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .chip-row {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: thin;
+  }
+  .filter-chip {
+    flex: none;
+    padding: 6px 13px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-size: .78rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .filter-chip.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-contrast);
+  }
+  .filter-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .cat-section { margin-bottom: 22px; }
+  .cat-section.hidden { display: none; }
+  .cat-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: "Big Shoulders Display", sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    margin: 0 0 8px;
+    color: var(--text);
+  }
+  .cat-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--cat-color, var(--accent)); flex: none; }
+  .cat-count {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 500;
+    font-size: .78rem;
+    color: var(--muted);
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+  }
+  .cat-items { display: flex; flex-direction: column; gap: 8px; }
+
+  .item-row {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: 0 1px 2px var(--shadow);
+  }
+  .item-row.hidden { display: none; }
+  .item-name { margin: 0 0 4px; font-weight: 700; font-size: 1rem; }
+  .item-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 2px; }
+  .meta-text { font-size: .78rem; color: var(--muted); }
+  .item-notes { margin: 4px 0 0; font-size: .8rem; color: var(--muted); font-style: italic; }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 9px;
+    border-radius: 100px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .7rem;
+    font-weight: 600;
+    letter-spacing: .01em;
+  }
+  .chip-good { background: var(--good-soft); color: var(--good); }
+  .chip-warn { background: var(--warn-soft); color: var(--warn); }
+  .chip-critical { background: var(--critical-soft); color: var(--critical); }
+  .chip-neutral { background: var(--surface-2); color: var(--muted); }
+
+  .item-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .qty-stepper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface-2);
+    border-radius: 100px;
+    padding: 3px;
+  }
+  .qty-btn {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    border: none;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 1.05rem;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 1px 2px var(--shadow);
+  }
+  .qty-btn:active { transform: scale(.94); }
+  .qty-value {
+    min-width: 64px;
+    text-align: center;
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 600;
+    font-size: .85rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .qty-unit { color: var(--muted); font-weight: 500; }
+  .icon-btn {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    padding: 7px 12px;
+    border-radius: 8px;
+    font-size: .78rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .icon-btn:hover { color: var(--text); border-color: var(--accent); }
+  .icon-btn.danger { color: var(--critical); }
+  .icon-btn.danger:hover { border-color: var(--critical); }
+  .icon-btn:focus-visible, .qty-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .confirm-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    font-size: .84rem;
+    flex-wrap: wrap;
+  }
+  .confirm-row.hidden { display: none; }
+
+  .empty-state {
+    text-align: center;
+    padding: 56px 20px;
+    color: var(--muted);
+  }
+  .empty-state-title {
+    font-family: "Big Shoulders Display", sans-serif;
+    font-weight: 700;
+    font-size: 1.3rem;
+    color: var(--text);
+    margin: 0 0 6px;
+  }
+  .empty-state p { margin: 0; font-size: .9rem; }
+
+  .fab {
+    position: fixed;
+    right: 18px;
+    bottom: calc(18px + env(safe-area-inset-bottom));
+    padding: 14px 22px;
+    border-radius: 100px;
+    border: none;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    font-family: "Public Sans", sans-serif;
+    font-weight: 700;
+    font-size: .92rem;
+    cursor: pointer;
+    box-shadow: 0 6px 18px var(--shadow);
+    z-index: 20;
+  }
+  .fab:active { transform: scale(.97); }
+  .fab:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+
+  body.read-only .fab { display: none; }
+  body.read-only .qty-btn,
+  body.read-only .item-controls .icon-btn {
+    opacity: .35;
+    pointer-events: none;
+  }
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(8,16,20,.5);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 30;
+    padding: 0;
+  }
+  .modal-backdrop.hidden { display: none; }
+  @media (min-width: 560px) {
+    .modal-backdrop { align-items: center; padding: 20px; }
+  }
+  .modal {
+    width: 100%;
+    max-width: 460px;
+    max-height: 92vh;
+    overflow-y: auto;
+    background: var(--surface);
+    border-radius: 16px 16px 0 0;
+    padding: 22px 20px calc(20px + env(safe-area-inset-bottom));
+  }
+  @media (min-width: 560px) {
+    .modal { border-radius: 14px; padding: 24px; }
+  }
+  .modal h2 {
+    font-family: "Big Shoulders Display", sans-serif;
+    font-size: 1.4rem;
+    margin: 0 0 16px;
+  }
+  .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; font-size: .82rem; font-weight: 600; }
+  .field span em { font-weight: 400; font-style: normal; color: var(--muted); }
+  .field input, .field select, .field textarea {
+    font-family: inherit;
+    font-size: .92rem;
+    font-weight: 400;
+    padding: 9px 11px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    width: 100%;
+  }
+  .field textarea { resize: vertical; min-height: 44px; }
+  .field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 1px;
+  }
+  .field-row { display: flex; gap: 10px; }
+  .field-row .field { flex: 1; }
+  .field-qty { flex: 0 0 90px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+  .btn-primary, .btn-secondary {
+    padding: 10px 18px;
+    border-radius: 9px;
+    font-weight: 700;
+    font-size: .88rem;
+    cursor: pointer;
+    font-family: inherit;
+    border: 1px solid transparent;
+  }
+  .btn-primary { background: var(--accent); color: var(--accent-contrast); }
+  .btn-secondary { background: transparent; border-color: var(--border); color: var(--text); }
+  .btn-primary:focus-visible, .btn-secondary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(22px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    background: var(--text);
+    color: var(--bg);
+    padding: 10px 18px;
+    border-radius: 100px;
+    font-size: .84rem;
+    font-weight: 600;
+    z-index: 40;
+    box-shadow: 0 6px 18px var(--shadow);
+    max-width: 90vw;
+    text-align: center;
+  }
+  .toast.hidden { display: none; }
 </style>
 </head>
 <body>
 
-<h1>Training Dashboard</h1>
-<div class="meta">Generated 2026-08-25T21:24 &middot; FTP target 320 W (Garmin auto-detect: 308W as of 2026-05-26) &middot; 193 cm / 76 kg</div>
-
-<div class="countdown">
-  <div>
-    <div class="big" id="cd-days">--</div>
-    <div class="label">days to Race Day &middot; 2027-04-14</div>
+<div class="page">
+  <div class="topbar">
+    <div>
+      <p class="eyebrow">Cold Storage Log</p>
+      <h1>Frost Manifest</h1>
+    </div>
+    <span id="status-badge" class="status-badge status-connecting">Connecting…</span>
   </div>
-  <div class="stats">
-    <div class="stat"><div class="v" id="cd-weeks">--</div><div class="l">weeks remaining</div></div>
+
+  <div id="summary-root" class="summary"><div class="summary-card">
+      <span class="summary-value">0</span>
+      <span class="summary-label">Items logged</span>
+    </div>
+    <div class="summary-card ">
+      <span class="summary-value">0</span>
+      <span class="summary-label">Use within 14 days</span>
+    </div>
+    <div class="summary-card">
+      <span class="summary-value">0</span>
+      <span class="summary-label">Categories in use</span>
+    </div>
+    <div class="summary-card summary-oldest">
+      <span class="summary-value summary-oldest-name">—</span>
+      <span class="summary-label">Nothing frozen yet</span>
+    </div></div>
+
+  <div id="controls-root" class="controls">
+    <input id="search-input" class="search-input" type="search" placeholder="Search the freezer…" autocomplete="off">
+    <div id="filter-chips" class="chip-row">
+      <button type="button" class="filter-chip active" data-filter="all">All</button>
+      <button type="button" class="filter-chip" data-filter="meat">Meat & Poultry</button>
+      <button type="button" class="filter-chip" data-filter="seafood">Fish & Seafood</button>
+      <button type="button" class="filter-chip" data-filter="vegetables">Vegetables</button>
+      <button type="button" class="filter-chip" data-filter="fruit">Fruit</button>
+      <button type="button" class="filter-chip" data-filter="bakery">Bread & Baked Goods</button>
+      <button type="button" class="filter-chip" data-filter="meals">Prepared Meals</button>
+      <button type="button" class="filter-chip" data-filter="dessert">Ice Cream & Desserts</button>
+      <button type="button" class="filter-chip" data-filter="other">Other</button>
+    </div>
+  </div>
+
+  <main id="list-root"><div class="empty-state">
+      <p class="empty-state-title">The freezer log is empty</p>
+      <p>Tap "Add item" to log the first thing in the freezer.</p>
+    </div></main>
+</div>
+
+<div id="modal-backdrop" class="modal-backdrop hidden">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <h2 id="modal-title">Add item</h2>
+    <form id="item-form">
+      <input type="hidden" id="f-id" value="">
+      <label class="field">
+        <span>Name</span>
+        <input type="text" id="f-name" required maxlength="60" placeholder="e.g. Chicken thighs">
+      </label>
+      <label class="field">
+        <span>Category</span>
+        <select id="f-category">
+          <option value="meat">Meat & Poultry</option>
+          <option value="seafood">Fish & Seafood</option>
+          <option value="vegetables">Vegetables</option>
+          <option value="fruit">Fruit</option>
+          <option value="bakery">Bread & Baked Goods</option>
+          <option value="meals">Prepared Meals</option>
+          <option value="dessert">Ice Cream & Desserts</option>
+          <option value="other">Other</option>
+        </select>
+      </label>
+      <div class="field-row">
+        <label class="field field-qty">
+          <span>Quantity</span>
+          <input type="number" id="f-quantity" min="0" step="1" value="1" inputmode="numeric">
+        </label>
+        <label class="field">
+          <span>Unit</span>
+          <select id="f-unit">
+            <option value="pcs">pcs</option>
+            <option value="lb">lb</option>
+            <option value="kg">kg</option>
+            <option value="oz">oz</option>
+            <option value="g">g</option>
+            <option value="bag">bag</option>
+            <option value="box">box</option>
+            <option value="container">container</option>
+            <option value="pint">pint</option>
+            <option value="quart">quart</option>
+          </select>
+        </label>
+      </div>
+      <label class="field">
+        <span>Location <em>(optional)</em></span>
+        <input type="text" id="f-location" maxlength="60" placeholder="e.g. Garage freezer, top shelf">
+      </label>
+      <div class="field-row">
+        <label class="field">
+          <span>Frozen on</span>
+          <input type="date" id="f-frozen">
+        </label>
+        <label class="field">
+          <span>Use by <em>(optional)</em></span>
+          <input type="date" id="f-expiry">
+        </label>
+      </div>
+      <label class="field">
+        <span>Notes <em>(optional)</em></span>
+        <textarea id="f-notes" maxlength="200" rows="2" placeholder="e.g. Portioned into 4"></textarea>
+      </label>
+      <div class="modal-actions">
+        <button type="button" id="f-cancel" class="btn-secondary">Cancel</button>
+        <button type="submit" class="btn-primary">Save item</button>
+      </div>
+    </form>
   </div>
 </div>
 
-<div class="grid">
+<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
-  <div class="card full-width">
-    <h2>Training Load — CTL (fitness) / ATL (fatigue) / TSB (form)</h2>
-    <canvas id="chart-ctl"></canvas>
-    <div class="footnote">CTL/ATL/TSB are computed locally from each activity's Training Stress Score (Garmin doesn't expose the raw numbers), using the standard 42-day/7-day exponentially-weighted model.</div>
-  </div>
+<button id="fab-add" class="fab" type="button">+ Add item</button>
 
-  <div class="card">
-    <h2>Weekly Mileage</h2>
-    <canvas id="chart-mileage"></canvas>
-  </div>
-
-  <div class="card">
-    <h2>VO2max Trend</h2>
-    <canvas id="chart-vo2max"></canvas>
-    <div class="footnote">Garmin's estimate (cycling) and Apple Watch's (running) use different algorithms and aren't directly comparable — shown together only to track each one's own trend.</div>
-  </div>
-
-  <div class="card">
-    <h2>Heart Rate Variability <span id="hrv-source" class="footnote"></span></h2>
-    <canvas id="chart-hrv"></canvas>
-  </div>
-
-  <div class="card">
-    <h2>Resting Heart Rate <span id="rhr-source" class="footnote"></span></h2>
-    <canvas id="chart-rhr"></canvas>
-  </div>
-
-  <div class="card">
-    <h2>Blood Oxygen (SpO2)</h2>
-    <canvas id="chart-spo2"></canvas>
-  </div>
-
-  <div class="card full-width">
-    <h2>Sleep <span id="sleep-source" class="footnote"></span></h2>
-    <canvas id="chart-sleep"></canvas>
-  </div>
-
-  <div class="card full-width">
-    <h2>Easy vs. Workout — is easy actually easy?</h2>
-    <div id="intensity-panel"></div>
-  </div>
-
-  <div class="card full-width">
-    <h2>Recent Activities (last 28 days)</h2>
-    <table id="recent-table">
-      <thead><tr>
-        <th>Date</th><th>Name</th><th>Source</th><th>Sport</th><th>Distance</th><th>Duration</th>
-        <th>Pace / Speed</th><th>Avg HR</th><th>TSS</th><th></th>
-      </tr></thead>
-      <tbody></tbody>
-    </table>
-  </div>
-
-</div>
-
+<script id="state-data-holder" type="application/json">{"items":[]}</script>
 <script>
-const DATA = {"generated_at": "2026-08-25T21:24", "athlete": {"height_cm": 193, "weight_kg": 76, "ftp_target_w": 320, "ftp_garmin_w": 308, "ftp_garmin_date": "2026-05-26", "ten_k_target_pace": "4:30"}, "race": {"name": "Race Day", "date": "2027-04-14", "days_remaining": 232, "weeks_remaining": 33}, "ctl_atl_tsb": [{"date": "2026-06-02", "ctl": 29.6, "atl": 42.7, "tsb": -13.1}, {"date": "2026-06-03", "ctl": 28.9, "atl": 36.6, "tsb": -7.7}, {"date": "2026-06-04", "ctl": 28.2, "atl": 31.3, "tsb": -3.1}, {"date": "2026-06-05", "ctl": 32.5, "atl": 56.7, "tsb": -24.1}, {"date": "2026-06-06", "ctl": 31.7, "atl": 48.6, "tsb": -16.8}, {"date": "2026-06-07", "ctl": 31.0, "atl": 41.6, "tsb": -10.6}, {"date": "2026-06-08", "ctl": 30.2, "atl": 35.7, "tsb": -5.4}, {"date": "2026-06-09", "ctl": 29.5, "atl": 30.6, "tsb": -1.1}, {"date": "2026-06-10", "ctl": 30.6, "atl": 37.1, "tsb": -6.4}, {"date": "2026-06-11", "ctl": 29.9, "atl": 31.8, "tsb": -1.9}, {"date": "2026-06-12", "ctl": 29.2, "atl": 27.2, "tsb": 2.0}, {"date": "2026-06-13", "ctl": 33.2, "atl": 51.7, "tsb": -18.5}, {"date": "2026-06-14", "ctl": 32.4, "atl": 44.3, "tsb": -11.9}, {"date": "2026-06-15", "ctl": 33.3, "atl": 47.9, "tsb": -14.6}, {"date": "2026-06-16", "ctl": 33.9, "atl": 49.1, "tsb": -15.2}, {"date": "2026-06-17", "ctl": 33.0, "atl": 42.1, "tsb": -9.0}, {"date": "2026-06-18", "ctl": 32.3, "atl": 36.1, "tsb": -3.8}, {"date": "2026-06-19", "ctl": 31.5, "atl": 30.9, "tsb": 0.6}, {"date": "2026-06-20", "ctl": 33.0, "atl": 39.9, "tsb": -6.9}, {"date": "2026-06-21", "ctl": 38.1, "atl": 69.5, "tsb": -31.4}, {"date": "2026-06-22", "ctl": 37.2, "atl": 59.6, "tsb": -22.4}, {"date": "2026-06-23", "ctl": 36.3, "atl": 51.1, "tsb": -14.8}, {"date": "2026-06-24", "ctl": 35.9, "atl": 46.6, "tsb": -10.7}, {"date": "2026-06-25", "ctl": 35.0, "atl": 39.9, "tsb": -4.9}, {"date": "2026-06-26", "ctl": 34.2, "atl": 34.2, "tsb": -0.0}, {"date": "2026-06-27", "ctl": 33.4, "atl": 29.3, "tsb": 4.0}, {"date": "2026-06-28", "ctl": 32.6, "atl": 25.1, "tsb": 7.4}, {"date": "2026-06-29", "ctl": 32.1, "atl": 23.3, "tsb": 8.8}, {"date": "2026-06-30", "ctl": 32.8, "atl": 28.5, "tsb": 4.3}, {"date": "2026-07-01", "ctl": 32.0, "atl": 24.4, "tsb": 7.6}, {"date": "2026-07-02", "ctl": 31.2, "atl": 20.9, "tsb": 10.3}, {"date": "2026-07-03", "ctl": 30.5, "atl": 17.9, "tsb": 12.5}, {"date": "2026-07-04", "ctl": 29.7, "atl": 15.4, "tsb": 14.4}, {"date": "2026-07-05", "ctl": 29.0, "atl": 13.2, "tsb": 15.9}, {"date": "2026-07-06", "ctl": 28.3, "atl": 11.3, "tsb": 17.1}, {"date": "2026-07-07", "ctl": 27.7, "atl": 9.7, "tsb": 18.0}, {"date": "2026-07-08", "ctl": 27.0, "atl": 8.3, "tsb": 18.7}, {"date": "2026-07-09", "ctl": 27.1, "atl": 11.4, "tsb": 15.7}, {"date": "2026-07-10", "ctl": 27.8, "atl": 18.1, "tsb": 9.7}, {"date": "2026-07-11", "ctl": 27.2, "atl": 15.5, "tsb": 11.6}, {"date": "2026-07-12", "ctl": 26.5, "atl": 13.3, "tsb": 13.2}, {"date": "2026-07-13", "ctl": 25.9, "atl": 11.4, "tsb": 14.5}, {"date": "2026-07-14", "ctl": 25.3, "atl": 9.8, "tsb": 15.5}, {"date": "2026-07-15", "ctl": 26.0, "atl": 16.2, "tsb": 9.8}, {"date": "2026-07-16", "ctl": 25.4, "atl": 13.9, "tsb": 11.5}, {"date": "2026-07-17", "ctl": 24.8, "atl": 11.9, "tsb": 12.8}, {"date": "2026-07-18", "ctl": 24.2, "atl": 10.2, "tsb": 14.0}, {"date": "2026-07-19", "ctl": 23.6, "atl": 8.8, "tsb": 14.8}, {"date": "2026-07-20", "ctl": 23.0, "atl": 7.5, "tsb": 15.5}, {"date": "2026-07-21", "ctl": 22.5, "atl": 6.4, "tsb": 16.1}, {"date": "2026-07-22", "ctl": 21.9, "atl": 5.5, "tsb": 16.4}, {"date": "2026-07-23", "ctl": 23.4, "atl": 16.6, "tsb": 6.8}, {"date": "2026-07-24", "ctl": 22.9, "atl": 14.3, "tsb": 8.6}, {"date": "2026-07-25", "ctl": 22.3, "atl": 12.2, "tsb": 10.1}, {"date": "2026-07-26", "ctl": 21.8, "atl": 10.5, "tsb": 11.3}, {"date": "2026-07-27", "ctl": 22.7, "atl": 17.9, "tsb": 4.9}, {"date": "2026-07-28", "ctl": 23.8, "atl": 25.2, "tsb": -1.3}, {"date": "2026-07-29", "ctl": 23.3, "atl": 21.6, "tsb": 1.7}, {"date": "2026-07-30", "ctl": 22.7, "atl": 18.5, "tsb": 4.2}, {"date": "2026-07-31", "ctl": 25.9, "atl": 37.9, "tsb": -12.1}, {"date": "2026-08-01", "ctl": 25.2, "atl": 32.5, "tsb": -7.3}, {"date": "2026-08-02", "ctl": 24.6, "atl": 27.9, "tsb": -3.2}, {"date": "2026-08-03", "ctl": 24.8, "atl": 28.5, "tsb": -3.7}, {"date": "2026-08-04", "ctl": 25.3, "atl": 30.5, "tsb": -5.3}, {"date": "2026-08-05", "ctl": 24.7, "atl": 26.2, "tsb": -1.5}, {"date": "2026-08-06", "ctl": 24.1, "atl": 22.4, "tsb": 1.6}, {"date": "2026-08-07", "ctl": 23.5, "atl": 19.2, "tsb": 4.3}, {"date": "2026-08-08", "ctl": 25.8, "atl": 33.8, "tsb": -8.0}, {"date": "2026-08-09", "ctl": 26.1, "atl": 34.4, "tsb": -8.3}, {"date": "2026-08-10", "ctl": 25.5, "atl": 29.5, "tsb": -4.0}, {"date": "2026-08-11", "ctl": 25.7, "atl": 30.2, "tsb": -4.5}, {"date": "2026-08-12", "ctl": 26.4, "atl": 33.9, "tsb": -7.5}, {"date": "2026-08-13", "ctl": 26.4, "atl": 32.5, "tsb": -6.1}, {"date": "2026-08-14", "ctl": 26.4, "atl": 31.8, "tsb": -5.4}, {"date": "2026-08-15", "ctl": 25.8, "atl": 27.3, "tsb": -1.5}, {"date": "2026-08-16", "ctl": 25.2, "atl": 23.4, "tsb": 1.8}, {"date": "2026-08-17", "ctl": 24.7, "atl": 20.9, "tsb": 3.8}, {"date": "2026-08-18", "ctl": 24.1, "atl": 17.9, "tsb": 6.2}, {"date": "2026-08-19", "ctl": 23.5, "atl": 15.4, "tsb": 8.2}, {"date": "2026-08-20", "ctl": 23.0, "atl": 13.2, "tsb": 9.8}, {"date": "2026-08-21", "ctl": 22.4, "atl": 11.3, "tsb": 11.2}, {"date": "2026-08-22", "ctl": 22.7, "atl": 14.3, "tsb": 8.4}, {"date": "2026-08-23", "ctl": 22.4, "atl": 13.8, "tsb": 8.6}, {"date": "2026-08-24", "ctl": 21.9, "atl": 11.8, "tsb": 10.0}, {"date": "2026-08-25", "ctl": 21.3, "atl": 10.1, "tsb": 11.2}], "weekly_mileage": {"week_labels": ["Jun 08", "Jun 15", "Jun 22", "Jun 29", "Jul 06", "Jul 13", "Jul 20", "Jul 27", "Aug 03", "Aug 10", "Aug 17", "Aug 24"], "running_km": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 10.2], "cycling_km": [148.9, 214.2, 15.2, 37.1, 50.4, 36.0, 24.4, 158.8, 142.7, 84.2, 42.2, 0.0], "total_km": [148.9, 214.2, 15.2, 37.1, 50.4, 36.0, 24.4, 158.8, 142.7, 84.2, 42.2, 10.2], "trend": [114.0, 107.9, 101.8, 95.6, 89.5, 83.4, 77.3, 71.2, 65.1, 59.0, 52.8, 46.7]}, "vo2max": {"dates": ["2026-06-05", "2026-06-10", "2026-06-13", "2026-06-15", "2026-06-16", "2026-06-20", "2026-06-21", "2026-06-24", "2026-06-29", "2026-06-30", "2026-07-09", "2026-07-10", "2026-07-15", "2026-07-23", "2026-07-27", "2026-07-28", "2026-07-31", "2026-08-03", "2026-08-04", "2026-08-08", "2026-08-11", "2026-08-12", "2026-08-13", "2026-08-14", "2026-08-22"], "values": [62.0, 62.0, 61.0, 61.0, 61.0, 61.0, 61.0, 61.0, 60.0, 60.0, 60.0, 59.0, 58.0, 58.0, 59.0, 59.0, 60.0, 59.0, 59.0, 58.0, 59.0, 59.0, 59.0, 60.0, 61.0]}, "vo2max_apple": {"dates": ["2026-08-24"], "values": [44.3]}, "recovery": {"hrv": {"dates": ["2026-08-22", "2026-08-23", "2026-08-24", "2026-08-25"], "values": [98.3, 79.6, 68.7, 118.2]}, "rhr": {"dates": ["2026-08-22", "2026-08-23", "2026-08-24", "2026-08-25"], "values": [44.0, 51.0, 51.0, 51.0]}, "sleep": {"dates": ["2026-08-22", "2026-08-24", "2026-08-25"], "hours": [7.49, 7.24, 7.91], "deep": [1.29, 0.66, 0.55], "rem": [2.31, 1.73, 2.04], "core": [3.89, 4.85, 5.32], "awake": [0.07, 0.42, 0.18]}, "spo2": {"dates": ["2026-08-22", "2026-08-24", "2026-08-25"], "values": [94.6, 97.0, 96.3]}}, "recovery_source": {"hrv": "apple_watch", "rhr": "apple_watch", "sleep": "apple_watch"}, "intensity": {"cycling": {"easy": {"n": 9, "avg_hr": 147.0, "avg_pct_ftp": 54.0}, "workout": {"n": 10, "avg_hr": 153.0, "avg_pct_ftp": 66.0}}, "running": {"easy": {"n": 1, "avg_hr": 161.0, "avg_pace_sec": 343.0}, "workout": null}}, "recent_activities": [{"id": "apple-run-2026-08-24T17:27:00", "name": "Apple Watch Run", "date": "2026-08-24", "datetime": "2026-08-24T17:27:00", "sport": "running", "type_key": "apple_watch_run", "event_type": null, "distance_km": 10.15, "duration_min": 58.0, "pace_sec_per_km": 342.85225851758395, "avg_speed_kmh": 10.5, "avg_hr": 161, "max_hr": 171, "avg_power": 225, "norm_power": null, "calories": null, "tss": 0.0, "intensity_factor": null, "anaerobic_te": null, "aerobic_te": null, "vo2max": null, "source": "apple_watch", "intensity": "easy", "pace_label": "5:43/km"}, {"id": 24087644625, "name": "Westerlo Fietsen: Gravel/Onverhard", "date": "2026-08-23", "datetime": "2026-08-23T14:52:19", "sport": "cycling", "type_key": "gravel_cycling", "event_type": "uncategorized", "distance_km": 19.04, "duration_min": 135.7, "pace_sec_per_km": 427.642286639284, "avg_speed_kmh": 8.4, "avg_hr": null, "max_hr": null, "avg_power": 38.0, "norm_power": 74.0, "calories": 447.0, "tss": 11.0, "intensity_factor": 0.23899999260902405, "anaerobic_te": 0.0, "aerobic_te": 0.20000000298023224, "vo2max": null, "source": "garmin", "intensity": "easy", "pace_label": null}, {"id": 24068652081, "name": "Westerlo - JOIN Cycling - 20 min FTP-test", "date": "2026-08-22", "datetime": "2026-08-22T08:59:40", "sport": "cycling", "type_key": "gravel_cycling", "event_type": "uncategorized", "distance_km": 17.31, "duration_min": 35.3, "pace_sec_per_km": 122.30909570425837, "avg_speed_kmh": 29.4, "avg_hr": 145.0, "max_hr": 178.0, "avg_power": 203.0, "norm_power": 230.0, "calories": 478.0, "tss": 32.29999923706055, "intensity_factor": 0.7459999918937683, "anaerobic_te": 1.7000000476837158, "aerobic_te": 3.0, "vo2max": 61.0, "source": "garmin", "intensity": "workout", "pace_label": null}, {"id": 24068323165, "name": "Westerlo Fietsen: Gravel/Onverhard", "date": "2026-08-17", "datetime": "2026-08-17T18:19:09", "sport": "cycling", "type_key": "gravel_cycling", "event_type": "uncategorized", "distance_km": 5.84, "duration_min": 14.5, "pace_sec_per_km": 148.62147316047245, "avg_speed_kmh": 24.2, "avg_hr": null, "max_hr": null, "avg_power": 140.0, "norm_power": 157.0, "calories": 144.0, "tss": 6.099999904632568, "intensity_factor": 0.5099999904632568, "anaerobic_te": 0.0, "aerobic_te": 0.5, "vo2max": null, "source": "garmin", "intensity": "easy", "pace_label": null}, {"id": 23975099339, "name": "Heist-op-den-Berg Fietsen: Gravel/Onverhard", "date": "2026-08-14", "datetime": "2026-08-14T15:53:35", "sport": "cycling", "type_key": "gravel_cycling", "event_type": "uncategorized", "distance_km": 7.84, "duration_min": 15.8, "pace_sec_per_km": 121.22870404680425, "avg_speed_kmh": 29.7, "avg_hr": 139.0, "max_hr": 160.0, "avg_power": 171.0, "norm_power": 179.0, "calories": 187.0, "tss": 8.699999809265137, "intensity_factor": 0.5820000171661377, "anaerobic_te": 0.0, "aerobic_te": 1.899999976158142, "vo2max": 60.0, "source": "garmin", "intensity": "easy", "pace_label": null}, {"id": 23970010624, "name": "Westerlo Fietsen: Gravel/Onverhard", "date": "2026-08-14", "datetime": "2026-08-14T07:19:01", "sport": "cycling", "type_key": "gravel_cycling", "event_type": "uncategorized", "distance_km": 7.57, "duration_min": 14.2, "pace_sec_per_km": 112.96740660191048, "avg_speed_kmh": 31.9, "avg_hr": 165.0, "max_hr": 180.0, "avg_power": 263.0, "norm_power": 280.0, "calories": 247.0, "tss": 19.0, "intensity_factor": 0.9089999794960022, "anaerobic_te": 0.4000000059604645, "aerobic_te": 2.799999952316284, "vo2max": 60.0, "source": "garmin", "intensity": "workout", "pace_label": null}, {"id": 23963290363, "name": "Heist-op-den-Berg Fietsen: Gravel/Onverhard", "date": "2026-08-13", "datetime": "2026-08-13T16:37:36", "sport": "cycling", "type_key": "gravel_cycling", "event_type": "uncategorized", "distance_km": 7.81, "duration_min": 17.4, "pace_sec_per_km": 133.67538006721884, "avg_speed_kmh": 26.9, "avg_hr": 140.0, "max_hr": 155.0, "avg_power": 179.0, "norm_power": 182.0, "calories": 214.0, "tss": 9.899999618530273, "intensity_factor": 0.5920000076293945, "anaerobic_te": 0.0, "aerobic_te": 2.0, "vo2max": 59.0, "source": "garmin", "intensity": "easy", "pace_label": null}, {"id": 23957572029, "name": "Westerlo Fietsen: Gravel/Onverhard", "date": "2026-08-13", "datetime": "2026-08-13T07:08:26", "sport": "cycling", "type_key": "gravel_cycling", "event_type": "uncategorized", "distance_km": 7.64, "duration_min": 14.7, "pace_sec_per_km": 115.70807775536467, "avg_speed_kmh": 31.1, "avg_hr": 158.0, "max_hr": 169.0, "avg_power": 227.0, "norm_power": 236.0, "calories": 223.0, "tss": 14.0, "intensity_factor": 0.765999972820282, "anaerobic_te": 0.0, "aerobic_te": 2.5999999046325684, "vo2max": 59.0, "source": "garmin", "intensity": "workout", "pace_label": null}, {"id": 23951300656, "name": "Heist-op-den-Berg Fietsen: Gravel/Onverhard", "date": "2026-08-12", "datetime": "2026-08-12T16:40:22", "sport": "cycling", "type_key": "gravel_cycling", "event_type": "uncategorized", "distance_km": 29.62, "duration_min": 58.6, "pace_sec_per_km": 118.69640880024953, "avg_speed_kmh": 30.3, "avg_hr": 149.0, "max_hr": 163.0, "avg_power": 199.0, "norm_power": 206.0, "calories": 793.0, "tss": 43.599998474121094, "intensity_factor": 0.6700000166893005, "anaerobic_te": 0.20000000298023224, "aerobic_te": 3.0999999046325684, "vo2max": 59.0, "source": "garmin", "intensity": "easy", "pace_label": null}, {"id": 23944796201, "name": "Westerlo Fietsen: Gravel/Onverhard", "date": "2026-08-12", "datetime": "2026-08-12T07:18:38", "sport": "cycling", "type_key": "gravel_cycling", "event_type": "uncategorized", "distance_km": 7.62, "duration_min": 14.1, "pace_sec_per_km": 111.18057368980415, "avg_speed_kmh": 32.4, "avg_hr": 151.0, "max_hr": 161.0, "avg_power": 223.0, "norm_power": 229.0, "calories": 211.0, "tss": 12.600000381469727, "intensity_factor": 0.7429999709129333, "anaerobic_te": 0.30000001192092896, "aerobic_te": 2.4000000953674316, "vo2max": 59.0, "source": "garmin", "intensity": "easy", "pace_label": null}, {"id": 23937890179, "name": "Westerlo Fietsen: Gravel/Onverhard", "date": "2026-08-11", "datetime": "2026-08-11T17:02:11", "sport": "cycling", "type_key": "gravel_cycling", "event_type": "uncategorized", "distance_km": 16.09, "duration_min": 35.2, "pace_sec_per_km": 131.17933867930864, "avg_speed_kmh": 27.4, "avg_hr": 147.0, "max_hr": 182.0, "avg_power": 196.0, "norm_power": 237.0, "calories": 468.0, "tss": 34.400001525878906, "intensity_factor": 0.7710000276565552, "anaerobic_te": 1.2999999523162842, "aerobic_te": 3.299999952316284, "vo2max": 59.0, "source": "garmin", "intensity": "workout", "pace_label": null}, {"id": 23908737093, "name": "Westerlo Fietsen: Gravel/Onverhard", "date": "2026-08-09", "datetime": "2026-08-09T10:18:59", "sport": "cycling", "type_key": "gravel_cycling", "event_type": "uncategorized", "distance_km": 27.78, "duration_min": 77.2, "pace_sec_per_km": 166.66690104603748, "avg_speed_kmh": 21.6, "avg_hr": 113.0, "max_hr": 179.0, "avg_power": 97.0, "norm_power": 168.0, "calories": 571.0, "tss": 38.0, "intensity_factor": 0.5450000166893005, "anaerobic_te": 2.200000047683716, "aerobic_te": 1.7999999523162842, "vo2max": null, "source": "garmin", "intensity": "workout", "pace_label": null}, {"id": 23895752460, "name": "Westerlo Fietsen: Gravel/Onverhard", "date": "2026-08-08", "datetime": "2026-08-08T08:11:12", "sport": "cycling", "type_key": "gravel_cycling", "event_type": "uncategorized", "distance_km": 66.62, "duration_min": 135.8, "pace_sec_per_km": 122.3243931454651, "avg_speed_kmh": 29.4, "avg_hr": 158.0, "max_hr": 189.0, "avg_power": 209.0, "norm_power": 226.0, "calories": 1919.0, "tss": 121.30000305175781, "intensity_factor": 0.7329999804496765, "anaerobic_te": 2.200000047683716, "aerobic_te": 5.0, "vo2max": 58.0, "source": "garmin", "intensity": "workout", "pace_label": null}, {"id": 23850513217, "name": "Heist-op-den-Berg Fietsen: Gravel/Onverhard", "date": "2026-08-04", "datetime": "2026-08-04T16:52:01", "sport": "cycling", "type_key": "gravel_cycling", "event_type": "uncategorized", "distance_km": 17.65, "duration_min": 35.8, "pace_sec_per_km": 121.82505795781584, "avg_speed_kmh": 29.5, "avg_hr": 158.0, "max_hr": 171.0, "avg_power": 215.0, "norm_power": 226.0, "calories": 519.0, "tss": 31.700000762939453, "intensity_factor": 0.7329999804496765, "anaerobic_te": 0.20000000298023224, "aerobic_te": 3.4000000953674316, "vo2max": 59.0, "source": "garmin", "intensity": "easy", "pace_label": null}, {"id": 23844165520, "name": "Westerlo Fietsen: Gravel/Onverhard", "date": "2026-08-04", "datetime": "2026-08-04T07:22:02", "sport": "cycling", "type_key": "gravel_cycling", "event_type": "uncategorized", "distance_km": 7.88, "duration_min": 15.0, "pace_sec_per_km": 114.50588187116621, "avg_speed_kmh": 31.4, "avg_hr": 147.0, "max_hr": 159.0, "avg_power": 201.0, "norm_power": 208.0, "calories": 205.0, "tss": 11.100000381469727, "intensity_factor": 0.6759999990463257, "anaerobic_te": 0.0, "aerobic_te": 2.299999952316284, "vo2max": 59.0, "source": "garmin", "intensity": "easy", "pace_label": null}, {"id": 23837937329, "name": "Aarschot Fietsen: Gravel/Onverhard", "date": "2026-08-03", "datetime": "2026-08-03T17:30:13", "sport": "cycling", "type_key": "gravel_cycling", "event_type": "uncategorized", "distance_km": 22.74, "duration_min": 46.6, "pace_sec_per_km": 123.04282185389506, "avg_speed_kmh": 29.3, "avg_hr": 147.0, "max_hr": 172.0, "avg_power": 188.0, "norm_power": 200.0, "calories": 599.0, "tss": 32.29999923706055, "intensity_factor": 0.6480000019073486, "anaerobic_te": 1.2000000476837158, "aerobic_te": 2.799999952316284, "vo2max": 59.0, "source": "garmin", "intensity": "easy", "pace_label": null}, {"id": 23802473320, "name": "Heist-op-den-Berg - JOIN Cycling - 4x 8 min kracht", "date": "2026-07-31", "datetime": "2026-07-31T15:11:59", "sport": "cycling", "type_key": "gravel_cycling", "event_type": "uncategorized", "distance_km": 85.05, "duration_min": 160.4, "pace_sec_per_km": 113.16890827130435, "avg_speed_kmh": 31.8, "avg_hr": 162.0, "max_hr": 176.0, "avg_power": 216.0, "norm_power": 220.0, "calories": 2330.0, "tss": 136.89999389648438, "intensity_factor": 0.7160000205039978, "anaerobic_te": 0.6000000238418579, "aerobic_te": 5.0, "vo2max": 59.0, "source": "garmin", "intensity": "workout", "pace_label": null}, {"id": 23796328030, "name": "Westerlo Fietsen: Gravel/Onverhard", "date": "2026-07-31", "datetime": "2026-07-31T07:20:29", "sport": "cycling", "type_key": "gravel_cycling", "event_type": "uncategorized", "distance_km": 7.35, "duration_min": 13.8, "pace_sec_per_km": 112.87168035091321, "avg_speed_kmh": 31.9, "avg_hr": 162.0, "max_hr": 186.0, "avg_power": 253.0, "norm_power": 275.0, "calories": 231.0, "tss": 17.700000762939453, "intensity_factor": 0.8920000195503235, "anaerobic_te": 2.0, "aerobic_te": 3.0, "vo2max": 60.0, "source": "garmin", "intensity": "workout", "pace_label": null}, {"id": 23764978781, "name": "Heist-op-den-Berg - JOIN Cycling - 2 sets 40-20's", "date": "2026-07-28", "datetime": "2026-07-28T16:38:46", "sport": "cycling", "type_key": "gravel_cycling", "event_type": "uncategorized", "distance_km": 28.73, "duration_min": 56.8, "pace_sec_per_km": 118.53569310203589, "avg_speed_kmh": 30.4, "avg_hr": 158.0, "max_hr": 186.0, "avg_power": 204.0, "norm_power": 230.0, "calories": 783.0, "tss": 52.400001525878906, "intensity_factor": 0.746999979019165, "anaerobic_te": 2.299999952316284, "aerobic_te": 3.5, "vo2max": 59.0, "source": "garmin", "intensity": "workout", "pace_label": null}, {"id": 23758223145, "name": "Westerlo Fietsen: Gravel/Onverhard", "date": "2026-07-28", "datetime": "2026-07-28T07:07:59", "sport": "cycling", "type_key": "gravel_cycling", "event_type": "uncategorized", "distance_km": 7.8, "duration_min": 14.1, "pace_sec_per_km": 108.79552517239246, "avg_speed_kmh": 33.1, "avg_hr": 164.0, "max_hr": 173.0, "avg_power": 258.0, "norm_power": 263.0, "calories": 241.0, "tss": 16.600000381469727, "intensity_factor": 0.8519999980926514, "anaerobic_te": 0.20000000298023224, "aerobic_te": 3.0, "vo2max": 59.0, "source": "garmin", "intensity": "workout", "pace_label": null}], "personal_records": [{"id": 2283253145, "typeId": 4, "status": "ACCEPTED", "activityId": 11543218618, "activityName": "Hardlopen", "activityType": "running", "activityStartDateTimeInGMT": 1689012000000, "actStartDateTimeInGMTFormatted": "2023-07-10T18:00:00.0", "activityStartDateTimeLocal": 1689019200000, "activityStartDateTimeLocalFormatted": "2023-07-10T20:00:00.0", "value": 3646.0, "prStartTimeGmt": 1689012000000, "prStartTimeGmtFormatted": "2023-07-10T18:00:00.0", "prStartTimeLocal": null, "prStartTimeLocalFormatted": null, "prTypeLabelKey": null, "poolLengthUnit": null}, {"id": 2283253146, "typeId": 7, "status": "ACCEPTED", "activityId": 11543218618, "activityName": "Hardlopen", "activityType": "running", "activityStartDateTimeInGMT": 1689012000000, "actStartDateTimeInGMTFormatted": "2023-07-10T18:00:00.0", "activityStartDateTimeLocal": 1689019200000, "activityStartDateTimeLocalFormatted": "2023-07-10T20:00:00.0", "value": 10100.0, "prStartTimeGmt": 1689012000000, "prStartTimeGmtFormatted": "2023-07-10T18:00:00.0", "prStartTimeLocal": null, "prStartTimeLocalFormatted": null, "prTypeLabelKey": null, "poolLengthUnit": null}, {"id": 1718522554, "typeId": 8, "status": "ACCEPTED", "activityId": 5472382006, "activityName": "Tessenderlo Wegwielrennen", "activityType": "road_biking", "activityStartDateTimeInGMT": 1598943938000, "actStartDateTimeInGMTFormatted": "2020-09-01T07:05:38.0", "activityStartDateTimeLocal": 1598951138000, "activityStartDateTimeLocalFormatted": "2020-09-01T09:05:38.0", "value": 158885.984375, "prStartTimeGmt": 1598943938000, "prStartTimeGmtFormatted": "2020-09-01T07:05:38.0", "prStartTimeLocal": null, "prStartTimeLocalFormatted": null, "prTypeLabelKey": null, "poolLengthUnit": null}, {"id": 2288720325, "typeId": 9, "status": "ACCEPTED", "activityId": 11618064985, "activityName": "Uvernet-Fours Wegwielrennen", "activityType": "road_biking", "activityStartDateTimeInGMT": 1690005146000, "actStartDateTimeInGMTFormatted": "2023-07-22T05:52:26.0", "activityStartDateTimeLocal": 1690012346000, "activityStartDateTimeLocalFormatted": "2023-07-22T07:52:26.0", "value": 3080.0, "prStartTimeGmt": 1690005146000, "prStartTimeGmtFormatted": "2023-07-22T05:52:26.0", "prStartTimeLocal": null, "prStartTimeLocalFormatted": null, "prTypeLabelKey": null, "poolLengthUnit": null}, {"id": 2695099333, "typeId": 10, "status": "ACCEPTED", "activityId": 19660173663, "activityName": "Heist-op-den-Berg - JOIN Cycling - 20 min FTP-test", "activityType": "road_biking", "activityStartDateTimeInGMT": 1751899240000, "actStartDateTimeInGMTFormatted": "2025-07-07T14:40:40.0", "activityStartDateTimeLocal": 1751906440000, "activityStartDateTimeLocalFormatted": "2025-07-07T16:40:40.0", "value": 330.21, "prStartTimeGmt": 1751899240000, "prStartTimeGmtFormatted": "2025-07-07T14:40:40.0", "prStartTimeLocal": null, "prStartTimeLocalFormatted": null, "prTypeLabelKey": null, "poolLengthUnit": null}, {"id": 2310451201, "typeId": 11, "status": "ACCEPTED", "activityId": 11928021549, "activityName": "Heusden-Zolder Wegwielrennen", "activityType": "road_biking", "activityStartDateTimeInGMT": 1693645159000, "actStartDateTimeInGMTFormatted": "2023-09-02T08:59:19.0", "activityStartDateTimeLocal": 1693652359000, "activityStartDateTimeLocalFormatted": "2023-09-02T10:59:19.0", "value": 3190.2099609375, "prStartTimeGmt": 1693647077000, "prStartTimeGmtFormatted": "2023-09-02T09:31:17.0", "prStartTimeLocal": null, "prStartTimeLocalFormatted": null, "prTypeLabelKey": null, "poolLengthUnit": null}]};
+const SCRIPT_EL = document.currentScript;
+const HEAD_HTML = document.head.outerHTML;
 
-Chart.defaults.color = '#8b93a1';
-Chart.defaults.borderColor = '#262c35';
-Chart.defaults.font.family = "-apple-system, 'Segoe UI', Roboto, Arial, sans-serif";
+const CATEGORIES = [
+  { key: 'meat', label: 'Meat & Poultry', hue: '#b5675f' },
+  { key: 'seafood', label: 'Fish & Seafood', hue: '#4f8fae' },
+  { key: 'vegetables', label: 'Vegetables', hue: '#5f8f5a' },
+  { key: 'fruit', label: 'Fruit', hue: '#9b6fae' },
+  { key: 'bakery', label: 'Bread & Baked Goods', hue: '#b98a4a' },
+  { key: 'meals', label: 'Prepared Meals', hue: '#4a90a4' },
+  { key: 'dessert', label: 'Ice Cream & Desserts', hue: '#c47fa0' },
+  { key: 'other', label: 'Other', hue: '#6b7f8a' }
+];
+const UNITS = ['pcs','lb','kg','oz','g','bag','box','container','pint','quart'];
+const READ_ONLY_CODES = ['not_writer','not_granted','not_declared','capability_disabled','capability_removed'];
 
-function paceLabel(sec) {
-  if (!sec || sec <= 0) return '-';
-  const m = Math.floor(sec / 60), s = Math.round(sec % 60);
-  return m + ':' + String(s).padStart(2, '0') + '/km';
+let state = JSON.parse(document.getElementById('state-data-holder').textContent);
+let artifactApi = null;
+let readOnly = false;
+let warnedOffline = false;
+let connectionStatus = { cls: 'connecting', text: 'Connecting…' };
+let toastTimer = null;
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
 }
 
-function emptyState(canvasId, msg) {
-  const c = document.getElementById(canvasId);
-  const div = document.createElement('div');
-  div.className = 'empty-state';
-  div.textContent = msg;
-  c.replaceWith(div);
+function generateId() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2);
 }
 
-// ---- Countdown ----
-document.getElementById('cd-days').textContent = DATA.race.days_remaining;
-document.getElementById('cd-weeks').textContent = DATA.race.weeks_remaining;
+function todayIso() {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 10);
+}
 
-// ---- CTL/ATL/TSB ----
-if (DATA.ctl_atl_tsb.length) {
-  new Chart(document.getElementById('chart-ctl'), {
-    type: 'line',
-    data: {
-      labels: DATA.ctl_atl_tsb.map(p => p.date),
-      datasets: [
-        { label: 'CTL (fitness)', data: DATA.ctl_atl_tsb.map(p => p.ctl), borderColor: '#4fb0ff', backgroundColor: 'rgba(79,176,255,.1)', fill: true, tension: .3, pointRadius: 0, borderWidth: 2 },
-        { label: 'ATL (fatigue)', data: DATA.ctl_atl_tsb.map(p => p.atl), borderColor: '#ff9f4f', tension: .3, pointRadius: 0, borderWidth: 2 },
-        { label: 'TSB (form)', data: DATA.ctl_atl_tsb.map(p => p.tsb), borderColor: '#8b93a1', borderDash: [4,3], tension: .3, pointRadius: 0, borderWidth: 1.5, yAxisID: 'y1' },
-      ]
-    },
-    options: {
-      interaction: { mode: 'index', intersect: false },
-      scales: {
-        x: { ticks: { maxTicksLimit: 12 } },
-        y: { title: { display: true, text: 'Load' } },
-        y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'TSB' } },
-      }
-    }
+function daysUntil(dateStr) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const target = new Date(dateStr + 'T00:00:00');
+  return Math.round((target - today) / 86400000);
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  const now = new Date();
+  const opts = d.getFullYear() === now.getFullYear()
+    ? { month: 'short', day: 'numeric' }
+    : { month: 'short', day: 'numeric', year: 'numeric' };
+  return d.toLocaleDateString('en-US', opts);
+}
+
+function expiryMeta(item) {
+  if (!item.expiryDate) return { cls: 'neutral', text: 'No use-by date' };
+  const d = daysUntil(item.expiryDate);
+  if (d < 0) return { cls: 'critical', text: Math.abs(d) + 'd overdue' };
+  if (d === 0) return { cls: 'critical', text: 'Use today' };
+  if (d <= 3) return { cls: 'critical', text: d + 'd left' };
+  if (d <= 14) return { cls: 'warn', text: d + 'd left' };
+  return { cls: 'good', text: d + 'd left' };
+}
+
+function computeSummary(items) {
+  const total = items.length;
+  const expSoon = items.filter(i => i.expiryDate && daysUntil(i.expiryDate) <= 14).length;
+  const categoriesUsed = new Set(items.map(i => i.category)).size;
+  let oldest = null;
+  items.forEach(i => {
+    if (i.frozenDate && (!oldest || i.frozenDate < oldest.frozenDate)) oldest = i;
   });
-} else {
-  emptyState('chart-ctl', 'No training load data available yet.');
+  return { total, expSoon, categoriesUsed, oldest };
 }
 
-// ---- Weekly mileage ----
-new Chart(document.getElementById('chart-mileage'), {
-  data: {
-    labels: DATA.weekly_mileage.week_labels,
-    datasets: [
-      { type: 'bar', label: 'Running km', data: DATA.weekly_mileage.running_km, backgroundColor: '#4fb0ff', stack: 's' },
-      { type: 'bar', label: 'Cycling km', data: DATA.weekly_mileage.cycling_km, backgroundColor: '#ff9f4f', stack: 's' },
-      { type: 'line', label: 'Trend', data: DATA.weekly_mileage.trend, borderColor: '#e8eaed', borderDash: [5,3], pointRadius: 0, tension: 0 },
-    ]
-  },
-  options: { scales: { x: { stacked: true }, y: { stacked: true, title: { display: true, text: 'km' } } } }
-});
+function renderSummary(state) {
+  const s = computeSummary(state.items);
+  return '' +
+    '<div class="summary-card">' +
+      '<span class="summary-value">' + s.total + '</span>' +
+      '<span class="summary-label">Items logged</span>' +
+    '</div>' +
+    '<div class="summary-card ' + (s.expSoon > 0 ? 'summary-warn' : '') + '">' +
+      '<span class="summary-value">' + s.expSoon + '</span>' +
+      '<span class="summary-label">Use within 14 days</span>' +
+    '</div>' +
+    '<div class="summary-card">' +
+      '<span class="summary-value">' + s.categoriesUsed + '</span>' +
+      '<span class="summary-label">Categories in use</span>' +
+    '</div>' +
+    '<div class="summary-card summary-oldest">' +
+      '<span class="summary-value summary-oldest-name">' + (s.oldest ? escapeHtml(s.oldest.name) : '—') + '</span>' +
+      '<span class="summary-label">' + (s.oldest ? 'Use first · frozen ' + formatDate(s.oldest.frozenDate) : 'Nothing frozen yet') + '</span>' +
+    '</div>';
+}
 
-// ---- VO2max ----
-(function () {
-  if (!DATA.vo2max.values.length && !DATA.vo2max_apple.values.length) {
-    emptyState('chart-vo2max', 'No VO2max estimate reported by Garmin or Apple Health for this window.');
+function renderItemRow(item) {
+  const meta = expiryMeta(item);
+  return '' +
+    '<article class="item-row" data-id="' + item.id + '" data-name="' + escapeHtml(item.name.toLowerCase()) + '" data-category="' + item.category + '">' +
+      '<div class="item-main">' +
+        '<p class="item-name">' + escapeHtml(item.name) + '</p>' +
+        '<div class="item-meta">' +
+          '<span class="chip chip-' + meta.cls + '">' + meta.text + '</span>' +
+          (item.frozenDate ? '<span class="meta-text">Frozen ' + formatDate(item.frozenDate) + '</span>' : '') +
+          (item.location ? '<span class="meta-text">' + escapeHtml(item.location) + '</span>' : '') +
+        '</div>' +
+        (item.notes ? '<p class="item-notes">' + escapeHtml(item.notes) + '</p>' : '') +
+      '</div>' +
+      '<div class="item-controls">' +
+        '<div class="qty-stepper">' +
+          '<button type="button" class="qty-btn" data-action="dec" aria-label="Decrease quantity">−</button>' +
+          '<span class="qty-value">' + item.quantity + ' <span class="qty-unit">' + escapeHtml(item.unit) + '</span></span>' +
+          '<button type="button" class="qty-btn" data-action="inc" aria-label="Increase quantity">+</button>' +
+        '</div>' +
+        '<button type="button" class="icon-btn" data-action="edit">Edit</button>' +
+        '<button type="button" class="icon-btn danger" data-action="delete">Remove</button>' +
+      '</div>' +
+      '<div class="confirm-row hidden">' +
+        '<span>Remove ' + escapeHtml(item.name) + '?</span>' +
+        '<button type="button" class="icon-btn danger" data-action="confirm-delete">Yes, remove</button>' +
+        '<button type="button" class="icon-btn" data-action="cancel-delete">Cancel</button>' +
+      '</div>' +
+    '</article>';
+}
+
+function renderList(state) {
+  const items = state.items;
+  if (items.length === 0) {
+    return '<div class="empty-state">' +
+      '<p class="empty-state-title">The freezer log is empty</p>' +
+      '<p>Tap "Add item" to log the first thing in the freezer.</p>' +
+    '</div>';
+  }
+  const groups = CATEGORIES
+    .map(c => ({ ...c, items: items.filter(i => i.category === c.key) }))
+    .filter(g => g.items.length > 0);
+  return groups.map(g => {
+    const sorted = g.items.slice().sort((a, b) => {
+      const da = a.expiryDate ? daysUntil(a.expiryDate) : Infinity;
+      const db = b.expiryDate ? daysUntil(b.expiryDate) : Infinity;
+      if (da !== db) return da - db;
+      return a.name.localeCompare(b.name);
+    });
+    return '<section class="cat-section" style="--cat-color:' + g.hue + '" data-category="' + g.key + '">' +
+      '<h2 class="cat-title"><span class="cat-dot"></span>' + escapeHtml(g.label) + '<span class="cat-count">' + sorted.length + '</span></h2>' +
+      '<div class="cat-items">' + sorted.map(renderItemRow).join('') + '</div>' +
+    '</section>';
+  }).join('');
+}
+
+function renderBody(state) {
+  return '' +
+  '<div class="page">' +
+    '<div class="topbar">' +
+      '<div>' +
+        '<p class="eyebrow">Cold Storage Log</p>' +
+        '<h1>Frost Manifest</h1>' +
+      '</div>' +
+      '<span id="status-badge" class="status-badge status-connecting">Connecting…</span>' +
+    '</div>' +
+    '<div id="summary-root" class="summary">' + renderSummary(state) + '</div>' +
+    '<div id="controls-root" class="controls">' +
+      '<input id="search-input" class="search-input" type="search" placeholder="Search the freezer…" autocomplete="off">' +
+      '<div id="filter-chips" class="chip-row">' +
+        '<button type="button" class="filter-chip active" data-filter="all">All</button>' +
+        CATEGORIES.map(c => '<button type="button" class="filter-chip" data-filter="' + c.key + '">' + escapeHtml(c.label) + '</button>').join('') +
+      '</div>' +
+    '</div>' +
+    '<main id="list-root">' + renderList(state) + '</main>' +
+  '</div>' +
+  '<div id="modal-backdrop" class="modal-backdrop hidden">' +
+    '<div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">' +
+      '<h2 id="modal-title">Add item</h2>' +
+      '<form id="item-form">' +
+        '<input type="hidden" id="f-id" value="">' +
+        '<label class="field"><span>Name</span><input type="text" id="f-name" required maxlength="60" placeholder="e.g. Chicken thighs"></label>' +
+        '<label class="field"><span>Category</span><select id="f-category">' +
+          CATEGORIES.map(c => '<option value="' + c.key + '">' + escapeHtml(c.label) + '</option>').join('') +
+        '</select></label>' +
+        '<div class="field-row">' +
+          '<label class="field field-qty"><span>Quantity</span><input type="number" id="f-quantity" min="0" step="1" value="1" inputmode="numeric"></label>' +
+          '<label class="field"><span>Unit</span><select id="f-unit">' + UNITS.map(u => '<option value="' + u + '">' + u + '</option>').join('') + '</select></label>' +
+        '</div>' +
+        '<label class="field"><span>Location <em>(optional)</em></span><input type="text" id="f-location" maxlength="60" placeholder="e.g. Garage freezer, top shelf"></label>' +
+        '<div class="field-row">' +
+          '<label class="field"><span>Frozen on</span><input type="date" id="f-frozen"></label>' +
+          '<label class="field"><span>Use by <em>(optional)</em></span><input type="date" id="f-expiry"></label>' +
+        '</div>' +
+        '<label class="field"><span>Notes <em>(optional)</em></span><textarea id="f-notes" maxlength="200" rows="2" placeholder="e.g. Portioned into 4"></textarea></label>' +
+        '<div class="modal-actions">' +
+          '<button type="button" id="f-cancel" class="btn-secondary">Cancel</button>' +
+          '<button type="submit" class="btn-primary">Save item</button>' +
+        '</div>' +
+      '</form>' +
+    '</div>' +
+  '</div>' +
+  '<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>' +
+  '<button id="fab-add" class="fab" type="button">+ Add item</button>';
+}
+
+function buildDocument(state) {
+  const json = JSON.stringify(state).replace(/</g, '\\u003c');
+  return '<!doctype html>\n<html lang="en">\n' + HEAD_HTML + '\n<body>\n' +
+    renderBody(state) +
+    '\n<script id="state-data-holder" type="application/json">' + json + '<' + '/script>\n' +
+    SCRIPT_EL.outerHTML +
+    '\n</body>\n</html>';
+}
+
+function updateStatusBadge() {
+  const el = document.getElementById('status-badge');
+  if (!el) return;
+  el.className = 'status-badge status-' + connectionStatus.cls;
+  el.textContent = connectionStatus.text;
+}
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.add('hidden'), 3500);
+}
+
+function applyFilters() {
+  const q = document.getElementById('search-input').value.trim().toLowerCase();
+  const activeChip = document.querySelector('#filter-chips [data-filter].active');
+  const cat = activeChip ? activeChip.dataset.filter : 'all';
+  document.querySelectorAll('.item-row').forEach(row => {
+    const matchesText = !q || row.dataset.name.indexOf(q) !== -1;
+    const matchesCat = cat === 'all' || row.dataset.category === cat;
+    row.classList.toggle('hidden', !(matchesText && matchesCat));
+  });
+  document.querySelectorAll('.cat-section').forEach(sec => {
+    const visible = sec.querySelectorAll('.item-row:not(.hidden)').length;
+    sec.classList.toggle('hidden', visible === 0);
+  });
+}
+
+function render() {
+  document.getElementById('summary-root').innerHTML = renderSummary(state);
+  document.getElementById('list-root').innerHTML = renderList(state);
+  applyFilters();
+  updateStatusBadge();
+}
+
+function enterReadOnly() {
+  if (readOnly) return;
+  readOnly = true;
+  connectionStatus = { cls: 'readonly', text: 'Read-only' };
+  updateStatusBadge();
+  document.body.classList.add('read-only');
+  showToast('You have view-only access to this freezer log.');
+}
+
+async function save(newState) {
+  const prevState = state;
+  state = newState;
+  render();
+
+  if (!artifactApi) {
+    if (!warnedOffline) {
+      warnedOffline = true;
+      showToast('Not connected — changes are not being saved.');
+    }
     return;
   }
-  const allDates = Array.from(new Set([...DATA.vo2max.dates, ...DATA.vo2max_apple.dates])).sort();
-  const lookup = (dates, values, d) => { const i = dates.indexOf(d); return i === -1 ? null : values[i]; };
-  const datasets = [];
-  if (DATA.vo2max.values.length) {
-    datasets.push({ label: 'VO2max (Garmin, cycling)', data: allDates.map(d => lookup(DATA.vo2max.dates, DATA.vo2max.values, d)), borderColor: '#4caf82', backgroundColor: 'rgba(76,175,130,.12)', fill: true, tension: .3, pointRadius: 2, spanGaps: true });
-  }
-  if (DATA.vo2max_apple.values.length) {
-    datasets.push({ label: 'VO2max (Apple Watch, running)', data: allDates.map(d => lookup(DATA.vo2max_apple.dates, DATA.vo2max_apple.values, d)), borderColor: '#4fb0ff', backgroundColor: 'rgba(79,176,255,.12)', fill: true, tension: .3, pointRadius: 2, spanGaps: true });
-  }
-  new Chart(document.getElementById('chart-vo2max'), {
-    type: 'line',
-    data: { labels: allDates, datasets },
-    options: { scales: { x: { ticks: { maxTicksLimit: 10 } } } }
-  });
-})();
 
-// ---- HRV ----
-document.getElementById('hrv-source').textContent = DATA.recovery.hrv.values.length ? `(source: ${DATA.recovery_source.hrv === 'garmin' ? 'Garmin' : 'Apple Watch'})` : '';
-if (DATA.recovery.hrv.values.length) {
-  new Chart(document.getElementById('chart-hrv'), {
-    type: 'line',
-    data: { labels: DATA.recovery.hrv.dates, datasets: [
-      { label: 'HRV (ms)', data: DATA.recovery.hrv.values, borderColor: '#4fb0ff', tension: .3, pointRadius: 2 },
-    ] }
-  });
-} else {
-  emptyState('chart-hrv', 'No HRV data found on Garmin or Apple Health for this window.');
+  connectionStatus = { cls: 'saving', text: 'Saving…' };
+  updateStatusBadge();
+
+  try {
+    await artifactApi.publish(buildDocument(state));
+    connectionStatus = { cls: 'live', text: 'Live' };
+    updateStatusBadge();
+  } catch (err) {
+    const code = err && err.code;
+    if (code === 'conflict') {
+      connectionStatus = { cls: 'live', text: 'Live' };
+      updateStatusBadge();
+    } else if (READ_ONLY_CODES.indexOf(code) !== -1) {
+      state = prevState;
+      render();
+      enterReadOnly();
+    } else {
+      state = prevState;
+      render();
+      connectionStatus = { cls: 'live', text: 'Live' };
+      updateStatusBadge();
+      showToast('Could not save — please try again.');
+    }
+  }
 }
 
-// ---- RHR ----
-document.getElementById('rhr-source').textContent = DATA.recovery.rhr.values.length ? `(source: ${DATA.recovery_source.rhr === 'garmin' ? 'Garmin' : 'Apple Watch'})` : '';
-if (DATA.recovery.rhr.values.length) {
-  new Chart(document.getElementById('chart-rhr'), {
-    type: 'line',
-    data: { labels: DATA.recovery.rhr.dates, datasets: [
-      { label: 'Resting HR', data: DATA.recovery.rhr.values, borderColor: '#e0625f', tension: .3, pointRadius: 2 },
-    ] }
-  });
-} else {
-  emptyState('chart-rhr', 'No resting heart rate data found on Garmin or Apple Health for this window.');
+function changeQty(item, delta) {
+  if (readOnly) return;
+  const next = Math.max(0, item.quantity + delta);
+  save({ items: state.items.map(i => i.id === item.id ? { ...i, quantity: next } : i) });
 }
 
-// ---- SpO2 ----
-if (DATA.recovery.spo2.values.length) {
-  new Chart(document.getElementById('chart-spo2'), {
-    type: 'line',
-    data: { labels: DATA.recovery.spo2.dates, datasets: [
-      { label: 'SpO2 (%)', data: DATA.recovery.spo2.values, borderColor: '#4caf82', tension: .3, pointRadius: 2 },
-    ] },
-    options: { scales: { y: { suggestedMin: 90, suggestedMax: 100 } } }
-  });
-} else {
-  emptyState('chart-spo2', 'No blood oxygen data found on Apple Health for this window.');
+function removeItem(id) {
+  if (readOnly) return;
+  save({ items: state.items.filter(i => i.id !== id) });
 }
 
-// ---- Sleep ----
-document.getElementById('sleep-source').textContent = DATA.recovery.sleep.hours.length ? `(source: ${DATA.recovery_source.sleep === 'garmin' ? 'Garmin' : 'Apple Watch'})` : '';
-if (DATA.recovery.sleep.hours.length) {
-  const s = DATA.recovery.sleep;
-  const hasStages = s.deep.some(v => v > 0) || s.rem.some(v => v > 0);
-  const datasets = hasStages
-    ? [
-        { label: 'Deep', data: s.deep, backgroundColor: '#2f5fa8', stack: 's' },
-        { label: 'Core / Light', data: s.core, backgroundColor: '#4fb0ff', stack: 's' },
-        { label: 'REM', data: s.rem, backgroundColor: '#8fd3c7', stack: 's' },
-        { label: 'Awake', data: s.awake, backgroundColor: '#e0625f', stack: 's' },
-      ]
-    : [{ label: 'Sleep (hrs)', data: s.hours, backgroundColor: '#4fb0ff', stack: 's' }];
-  new Chart(document.getElementById('chart-sleep'), {
-    type: 'bar',
-    data: { labels: s.dates, datasets },
-    options: { scales: { x: { stacked: true }, y: { stacked: true, title: { display: true, text: 'hours' } } } }
-  });
-} else {
-  emptyState('chart-sleep', 'No sleep data found on Garmin or Apple Health for this window.');
+function openModal(item) {
+  if (readOnly) return;
+  const form = document.getElementById('item-form');
+  form.reset();
+  document.getElementById('modal-title').textContent = item ? 'Edit item' : 'Add item';
+  document.getElementById('f-id').value = item ? item.id : '';
+  document.getElementById('f-name').value = item ? item.name : '';
+  document.getElementById('f-category').value = item ? item.category : CATEGORIES[0].key;
+  document.getElementById('f-quantity').value = item ? item.quantity : 1;
+  document.getElementById('f-unit').value = item ? item.unit : UNITS[0];
+  document.getElementById('f-location').value = item ? item.location : '';
+  document.getElementById('f-frozen').value = item ? item.frozenDate : todayIso();
+  document.getElementById('f-expiry').value = item ? item.expiryDate : '';
+  document.getElementById('f-notes').value = item ? item.notes : '';
+  document.getElementById('modal-backdrop').classList.remove('hidden');
+  document.getElementById('f-name').focus();
 }
 
-// ---- Intensity panel ----
-(function () {
-  const el = document.getElementById('intensity-panel');
-  const rows = [];
-  const c = DATA.intensity.cycling, r = DATA.intensity.running;
-  function fmtCycling(label, s) {
-    if (!s) return `<div class="stat"><div class="v">-</div><div class="l">${label} (no rides)</div></div>`;
-    return `<div class="stat"><div class="v">${s.avg_pct_ftp ?? '-'}% FTP</div><div class="l">${label} &middot; avg HR ${s.avg_hr ?? '-'} &middot; n=${s.n}</div></div>`;
+function closeModal() {
+  document.getElementById('modal-backdrop').classList.add('hidden');
+}
+
+function init() {
+  document.getElementById('list-root').addEventListener('click', e => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const row = btn.closest('.item-row');
+    if (!row) return;
+    const id = row.dataset.id;
+    const action = btn.dataset.action;
+    const item = state.items.find(i => i.id === id);
+    if (!item) return;
+    if (action === 'inc') changeQty(item, 1);
+    else if (action === 'dec') changeQty(item, -1);
+    else if (action === 'edit') openModal(item);
+    else if (action === 'delete') {
+      if (readOnly) return;
+      row.querySelector('.item-controls').classList.add('hidden');
+      row.querySelector('.confirm-row').classList.remove('hidden');
+    } else if (action === 'cancel-delete') {
+      row.querySelector('.item-controls').classList.remove('hidden');
+      row.querySelector('.confirm-row').classList.add('hidden');
+    } else if (action === 'confirm-delete') {
+      removeItem(id);
+    }
+  });
+
+  document.getElementById('search-input').addEventListener('input', applyFilters);
+  document.getElementById('filter-chips').addEventListener('click', e => {
+    const chip = e.target.closest('[data-filter]');
+    if (!chip) return;
+    document.querySelectorAll('#filter-chips [data-filter]').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    applyFilters();
+  });
+
+  document.getElementById('fab-add').addEventListener('click', () => openModal(null));
+  document.getElementById('f-cancel').addEventListener('click', closeModal);
+  document.getElementById('modal-backdrop').addEventListener('click', e => {
+    if (e.target.id === 'modal-backdrop') closeModal();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !document.getElementById('modal-backdrop').classList.contains('hidden')) closeModal();
+  });
+
+  document.getElementById('item-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const id = document.getElementById('f-id').value;
+    const name = document.getElementById('f-name').value.trim();
+    if (!name) return;
+    const draft = {
+      id: id || generateId(),
+      name: name,
+      category: document.getElementById('f-category').value,
+      quantity: Math.max(0, parseInt(document.getElementById('f-quantity').value, 10) || 0),
+      unit: document.getElementById('f-unit').value,
+      location: document.getElementById('f-location').value.trim(),
+      frozenDate: document.getElementById('f-frozen').value || todayIso(),
+      expiryDate: document.getElementById('f-expiry').value || '',
+      notes: document.getElementById('f-notes').value.trim()
+    };
+    const items = id ? state.items.map(i => i.id === id ? draft : i) : [...state.items, draft];
+    closeModal();
+    save({ items: items });
+  });
+
+  updateStatusBadge();
+
+  if (typeof claude !== 'undefined' && claude.use) {
+    claude.use('artifact').then(api => {
+      if (!api) {
+        connectionStatus = { cls: 'offline', text: 'Not connected' };
+        updateStatusBadge();
+        return;
+      }
+      artifactApi = api;
+      connectionStatus = { cls: 'live', text: 'Live' };
+      updateStatusBadge();
+    }).catch(() => {
+      connectionStatus = { cls: 'offline', text: 'Not connected' };
+      updateStatusBadge();
+    });
+  } else {
+    connectionStatus = { cls: 'offline', text: 'Not connected' };
+    updateStatusBadge();
   }
-  function fmtRunning(label, s) {
-    if (!s) return `<div class="stat"><div class="v">-</div><div class="l">${label} (no runs)</div></div>`;
-    return `<div class="stat"><div class="v">${paceLabel(s.avg_pace_sec)}</div><div class="l">${label} &middot; avg HR ${s.avg_hr ?? '-'} &middot; n=${s.n}</div></div>`;
-  }
-  el.innerHTML = `
-    <div style="margin-bottom:14px;color:var(--muted);font-size:.85rem;">Cycling (% of FTP target, ${DATA.athlete.ftp_target_w}W)</div>
-    <div class="stat-row">${fmtCycling('Easy', c.easy)}${fmtCycling('Workout', c.workout)}</div>
-    <div style="margin:14px 0 14px;color:var(--muted);font-size:.85rem;">Running pace (target 10K pace ${DATA.athlete.ten_k_target_pace}/km)</div>
-    <div class="stat-row">${fmtRunning('Easy', r.easy)}${fmtRunning('Workout', r.workout)}</div>
-  `;
-})();
+}
 
-// ---- Recent activities table ----
-(function () {
-  const tbody = document.querySelector('#recent-table tbody');
-  DATA.recent_activities.forEach(a => {
-    const tr = document.createElement('tr');
-    const speed = a.sport === 'running' ? (a.pace_label || '-') : (a.avg_speed_kmh ? a.avg_speed_kmh + ' km/h' : '-');
-    const src = a.source === 'apple_watch' ? 'Apple Watch' : 'Garmin';
-    tr.innerHTML = `
-      <td>${a.date}</td>
-      <td>${a.name}</td>
-      <td>${src}</td>
-      <td class="tag-${a.sport}">${a.sport}</td>
-      <td>${a.distance_km} km</td>
-      <td>${Math.round(a.duration_min)} min</td>
-      <td>${speed}</td>
-      <td>${a.avg_hr ?? '-'}</td>
-      <td>${a.tss ? a.tss.toFixed(0) : '-'}</td>
-      <td><span class="tag tag-${a.intensity}">${a.intensity}</span></td>
-    `;
-    tbody.appendChild(tr);
-  });
-})();
+document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>
