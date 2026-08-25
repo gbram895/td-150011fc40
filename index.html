@@ -556,7 +556,7 @@
           <input type="text" id="f-barcode" inputmode="numeric" pattern="[0-9]*" maxlength="14" placeholder="Scan or type the number">
           <button type="button" id="scan-btn" class="btn-secondary btn-scan">Scan</button>
         </div>
-        <span class="field-hint" id="scan-hint">Camera scan works on Chrome/Android. On iPhone, type the number — repeat items still autofill.</span>
+        <span class="field-hint" id="scan-hint">Point the camera at the barcode, in good light. No camera? Type the number instead.</span>
       </div>
       <label class="field">
         <span>Name</span>
@@ -662,8 +662,246 @@ let connectionStatus = { cls: 'connecting', text: 'Connecting…' };
 let toastTimer = null;
 let scanStream = null;
 let scanRAF = null;
+let scanTimer = null;
 let barcodeDetector = null;
-const SCAN_SUPPORTED = ('BarcodeDetector' in window) && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+const NATIVE_DETECTOR_SUPPORTED = 'BarcodeDetector' in window;
+const CAMERA_SUPPORTED = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+
+// --- EAN-13/UPC-A barcode decoding (pure JS, no native API — this is what
+// makes camera scanning work on iOS Safari, which has no BarcodeDetector).
+// Standard L/G/R module tables and first-digit parity, per the EAN-13 spec.
+const L_CODES = ['0001101','0011001','0010011','0111101','0100011','0110001','0101111','0111011','0110111','0001011'];
+function bitComplement(s) { let r = ''; for (let i = 0; i < s.length; i++) r += s[i] === '0' ? '1' : '0'; return r; }
+function reverseStr(s) { return s.split('').reverse().join(''); }
+const R_CODES = L_CODES.map(bitComplement);
+const G_CODES = L_CODES.map(s => bitComplement(reverseStr(s)));
+const REV_L_CODES = L_CODES.map(reverseStr);
+const PARITY_PATTERNS = {
+  LLLLLL: 0, LLGLGG: 1, LLGGLG: 2, LLGGGL: 3, LGLLGG: 4,
+  LGGLLG: 5, LGGGLL: 6, LGLGLG: 7, LGLGGL: 8, LGGLGL: 9
+};
+
+function ean13Checksum(d12) {
+  let odd = 0, even = 0;
+  for (let i = 0; i < 12; i++) { if (i % 2 === 0) odd += d12[i]; else even += d12[i]; }
+  return (10 - ((odd + even * 3) % 10)) % 10;
+}
+
+function toRuns(bin) {
+  const runs = [];
+  let color = bin[0], len = 0;
+  for (let i = 0; i < bin.length; i++) {
+    if (bin[i] === color) { len++; }
+    else { runs.push({ color, len }); color = bin[i]; len = 1; }
+  }
+  runs.push({ color, len });
+  return runs;
+}
+
+function runsToModules(runs, startIdx, moduleWidth, totalModules) {
+  let pattern = '';
+  let idx = startIdx;
+  while (pattern.length < totalModules) {
+    if (idx >= runs.length) return null;
+    const run = runs[idx];
+    let count = Math.max(1, Math.round(run.len / moduleWidth));
+    if (pattern.length + count > totalModules) count = totalModules - pattern.length;
+    pattern += String(run.color).repeat(count);
+    idx++;
+  }
+  return { pattern, nextIdx: idx };
+}
+
+function decodeDigit(runs, idx, moduleWidth, tables) {
+  const res = runsToModules(runs, idx, moduleWidth, 7);
+  if (!res) return null;
+  for (let t = 0; t < tables.length; t++) {
+    const d = tables[t].table.indexOf(res.pattern);
+    if (d !== -1) return { digit: d, code: tables[t].name, nextIdx: res.nextIdx };
+  }
+  return null;
+}
+
+function tryDecodeEAN13At(runs, i) {
+  if (i + 2 >= runs.length) return null;
+  if (runs[i].color !== 1 || runs[i + 1].color !== 0 || runs[i + 2].color !== 1) return null;
+  const g1 = runs[i].len, g2 = runs[i + 1].len, g3 = runs[i + 2].len;
+  const avg = (g1 + g2 + g3) / 3;
+  if (avg < 1) return null;
+  const within = w => { const r = w / avg; return r > 0.55 && r < 1.8; };
+  if (!within(g1) || !within(g2) || !within(g3)) return null;
+  let moduleWidth = avg;
+  let idx = i + 3;
+  const leftDigits = [];
+  let parity = '';
+  for (let k = 0; k < 6; k++) {
+    const d = decodeDigit(runs, idx, moduleWidth, [{ name: 'L', table: L_CODES }, { name: 'G', table: G_CODES }]);
+    if (!d) return null;
+    leftDigits.push(d.digit);
+    parity += d.code;
+    idx = d.nextIdx;
+  }
+  const leading = PARITY_PATTERNS[parity];
+  if (leading === undefined) return null;
+  if (idx + 4 >= runs.length) return null;
+  const midColors = [0, 1, 0, 1, 0];
+  for (let k = 0; k < 5; k++) {
+    if (runs[idx + k].color !== midColors[k]) return null;
+    const ratio = runs[idx + k].len / moduleWidth;
+    if (ratio < 0.5 || ratio > 1.8) return null;
+  }
+  moduleWidth = (runs[idx].len + runs[idx + 1].len + runs[idx + 2].len + runs[idx + 3].len + runs[idx + 4].len) / 5;
+  idx += 5;
+  const rightDigits = [];
+  for (let k = 0; k < 6; k++) {
+    const d = decodeDigit(runs, idx, moduleWidth, [{ name: 'R', table: R_CODES }]);
+    if (!d) return null;
+    rightDigits.push(d.digit);
+    idx = d.nextIdx;
+  }
+  if (idx + 2 >= runs.length) return null;
+  const endColors = [1, 0, 1];
+  for (let k = 0; k < 3; k++) {
+    if (runs[idx + k].color !== endColors[k]) return null;
+    const ratio = runs[idx + k].len / moduleWidth;
+    if (ratio < 0.5 || ratio > 1.8) return null;
+  }
+  const digits = [leading].concat(leftDigits, rightDigits);
+  const check = digits[12];
+  if (ean13Checksum(digits.slice(0, 12)) !== check) return null;
+  return digits.join('');
+}
+
+function decodeEAN13FromRow(bin) {
+  const runs = toRuns(bin);
+  if (runs.length < 20 || runs.length > 3000) return null;
+  for (let i = 0; i < runs.length - 30; i++) {
+    const result = tryDecodeEAN13At(runs, i);
+    if (result) return result;
+  }
+  return null;
+}
+
+// A barcode rotated 180 degrees in frame reads, left to right, as the exact
+// bar/space mirror of the upright symbol. That mirror is NOT simply the
+// same digits read backwards — each digit's own module pattern is reversed
+// too, and reverse(L-code) has no match in the L/G/R tables at all, so a
+// naive "reverse the row and reuse the normal decoder" never decodes
+// anything (verified: it always returns null). The correct mapping, derived
+// from the encoding tables: reverse(R[d]) = G[d] and reverse(G[d]) = R[d]
+// always; reverse(L[d]) matches nothing, so mirrored L-coded digits are
+// read via a dedicated reverse(L) table instead.
+function tryDecodeEAN13MirroredAt(runs, i) {
+  if (i + 2 >= runs.length) return null;
+  if (runs[i].color !== 1 || runs[i + 1].color !== 0 || runs[i + 2].color !== 1) return null;
+  const g1 = runs[i].len, g2 = runs[i + 1].len, g3 = runs[i + 2].len;
+  const avg = (g1 + g2 + g3) / 3;
+  if (avg < 1) return null;
+  const within = w => { const r = w / avg; return r > 0.55 && r < 1.8; };
+  if (!within(g1) || !within(g2) || !within(g3)) return null;
+  let moduleWidth = avg;
+  let idx = i + 3;
+  // First 6 slots are the mirrored original right-half digits, in reverse order.
+  const group1 = [];
+  for (let k = 0; k < 6; k++) {
+    const d = decodeDigit(runs, idx, moduleWidth, [{ name: 'G', table: G_CODES }]);
+    if (!d) return null;
+    group1.push(d.digit);
+    idx = d.nextIdx;
+  }
+  const rightDigits = group1.slice().reverse();
+  if (idx + 4 >= runs.length) return null;
+  const midColors = [0, 1, 0, 1, 0];
+  for (let k = 0; k < 5; k++) {
+    if (runs[idx + k].color !== midColors[k]) return null;
+    const ratio = runs[idx + k].len / moduleWidth;
+    if (ratio < 0.5 || ratio > 1.8) return null;
+  }
+  moduleWidth = (runs[idx].len + runs[idx + 1].len + runs[idx + 2].len + runs[idx + 3].len + runs[idx + 4].len) / 5;
+  idx += 5;
+  // Next 6 slots are the mirrored original left-half digits, in reverse order.
+  const group2Vals = [];
+  let group2Tags = '';
+  for (let k = 0; k < 6; k++) {
+    const d = decodeDigit(runs, idx, moduleWidth, [{ name: 'G', table: R_CODES }, { name: 'L', table: REV_L_CODES }]);
+    if (!d) return null;
+    group2Vals.push(d.digit);
+    group2Tags += d.code;
+    idx = d.nextIdx;
+  }
+  const leftDigits = group2Vals.slice().reverse();
+  const parity = group2Tags.split('').reverse().join('');
+  const leading = PARITY_PATTERNS[parity];
+  if (leading === undefined) return null;
+  if (idx + 2 >= runs.length) return null;
+  const endColors = [1, 0, 1];
+  for (let k = 0; k < 3; k++) {
+    if (runs[idx + k].color !== endColors[k]) return null;
+    const ratio = runs[idx + k].len / moduleWidth;
+    if (ratio < 0.5 || ratio > 1.8) return null;
+  }
+  const digits = [leading].concat(leftDigits, rightDigits);
+  const check = digits[12];
+  if (ean13Checksum(digits.slice(0, 12)) !== check) return null;
+  return digits.join('');
+}
+
+function decodeEAN13MirroredFromRow(bin) {
+  const runs = toRuns(bin);
+  if (runs.length < 20 || runs.length > 3000) return null;
+  for (let i = 0; i < runs.length - 30; i++) {
+    const result = tryDecodeEAN13MirroredAt(runs, i);
+    if (result) return result;
+  }
+  return null;
+}
+
+function otsuThreshold(gray) {
+  const hist = new Array(256).fill(0);
+  for (let i = 0; i < gray.length; i++) hist[gray[i]]++;
+  const total = gray.length;
+  let sum = 0;
+  for (let t = 0; t < 256; t++) sum += t * hist[t];
+  let sumB = 0, wB = 0, maxVar = 0, threshold = 127;
+  for (let t = 0; t < 256; t++) {
+    wB += hist[t];
+    if (wB === 0) continue;
+    const wF = total - wB;
+    if (wF === 0) break;
+    sumB += t * hist[t];
+    const mB = sumB / wB;
+    const mF = (sum - sumB) / wF;
+    const varBetween = wB * wF * (mB - mF) * (mB - mF);
+    if (varBetween > maxVar) { maxVar = varBetween; threshold = t; }
+  }
+  return threshold;
+}
+
+function scanCanvasForBarcode(canvas) {
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const w = canvas.width, h = canvas.height;
+  if (w < 20 || h < 20) return null;
+  const imgData = ctx.getImageData(0, 0, w, h).data;
+  const gray = new Uint8ClampedArray(w * h);
+  for (let p = 0; p < w * h; p++) {
+    const o = p * 4;
+    gray[p] = (imgData[o] * 0.299 + imgData[o + 1] * 0.587 + imgData[o + 2] * 0.114) | 0;
+  }
+  const threshold = otsuThreshold(gray);
+  const rowCount = 14;
+  const marginY = Math.floor(h * 0.15);
+  const usableH = h - marginY * 2;
+  for (let r = 0; r < rowCount; r++) {
+    const y = marginY + Math.floor((usableH * r) / (rowCount - 1));
+    const rowOffset = y * w;
+    const bin = new Uint8Array(w);
+    for (let x = 0; x < w; x++) bin[x] = gray[rowOffset + x] < threshold ? 1 : 0;
+    let result = decodeEAN13FromRow(bin);
+    if (!result) result = decodeEAN13MirroredFromRow(bin);
+    if (result) return result;
+  }
+  return null;
+}
 
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
@@ -824,7 +1062,7 @@ function renderBody(state) {
             '<input type="text" id="f-barcode" inputmode="numeric" pattern="[0-9]*" maxlength="14" placeholder="Scan or type the number">' +
             '<button type="button" id="scan-btn" class="btn-secondary btn-scan">Scan</button>' +
           '</div>' +
-          '<span class="field-hint" id="scan-hint">Camera scan works on Chrome/Android. On iPhone, type the number — repeat items still autofill.</span>' +
+          '<span class="field-hint" id="scan-hint">Point the camera at the barcode, in good light. No camera? Type the number instead.</span>' +
         '</div>' +
         '<label class="field"><span>Name</span><input type="text" id="f-name" required maxlength="60" placeholder="e.g. Chicken thighs"></label>' +
         '<label class="field"><span>Category</span><select id="f-category">' +
@@ -976,8 +1214,8 @@ function lookupCatalog() {
 
 async function openScanner() {
   if (readOnly) return;
-  if (!SCAN_SUPPORTED) {
-    showToast('Camera scanning is not supported in this browser — enter the barcode number instead.');
+  if (!CAMERA_SUPPORTED) {
+    showToast('Camera access is not available in this browser — enter the barcode number instead.');
     return;
   }
   const backdrop = document.getElementById('scanner-backdrop');
@@ -986,7 +1224,7 @@ async function openScanner() {
   backdrop.classList.remove('hidden');
   status.textContent = 'Starting camera…';
   try {
-    if (!barcodeDetector) {
+    if (NATIVE_DETECTOR_SUPPORTED && !barcodeDetector) {
       let formats = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'];
       try {
         const supported = await BarcodeDetector.getSupportedFormats();
@@ -999,36 +1237,57 @@ async function openScanner() {
     scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
     video.srcObject = scanStream;
     await video.play();
-    status.textContent = 'Point the camera at a barcode';
+    status.textContent = 'Hold the barcode level, filling the frame';
     scanLoop(video, status);
   } catch (err) {
     status.textContent = 'Could not access the camera — enter the barcode number instead.';
   }
 }
 
+function onBarcodeFound(value) {
+  closeScanner();
+  if (navigator.vibrate) navigator.vibrate(80);
+  document.getElementById('f-barcode').value = value;
+  lookupCatalog();
+}
+
 function scanLoop(video, status) {
-  const tick = async () => {
-    if (!scanStream) return;
-    try {
-      const codes = await barcodeDetector.detect(video);
-      if (codes.length > 0) {
-        const value = codes[0].rawValue;
-        closeScanner();
-        if (navigator.vibrate) navigator.vibrate(80);
-        document.getElementById('f-barcode').value = value;
-        lookupCatalog();
-        return;
-      }
-    } catch (e) { /* transient detection error, keep scanning */ }
+  if (NATIVE_DETECTOR_SUPPORTED) {
+    const tick = async () => {
+      if (!scanStream) return;
+      try {
+        const codes = await barcodeDetector.detect(video);
+        if (codes.length > 0) { onBarcodeFound(codes[0].rawValue); return; }
+      } catch (e) { /* transient detection error, keep scanning */ }
+      scanRAF = requestAnimationFrame(tick);
+    };
     scanRAF = requestAnimationFrame(tick);
+    return;
+  }
+  // No native detector (Safari/iOS, Firefox): decode frames ourselves.
+  const offCanvas = document.createElement('canvas');
+  const tick = () => {
+    if (!scanStream) return;
+    if (video.videoWidth) {
+      const scale = Math.min(1, 480 / video.videoWidth);
+      offCanvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+      offCanvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+      const ctx = offCanvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, offCanvas.width, offCanvas.height);
+      const result = scanCanvasForBarcode(offCanvas);
+      if (result) { onBarcodeFound(result); return; }
+    }
+    scanTimer = setTimeout(tick, 400);
   };
-  scanRAF = requestAnimationFrame(tick);
+  scanTimer = setTimeout(tick, 400);
 }
 
 function closeScanner() {
   document.getElementById('scanner-backdrop').classList.add('hidden');
   if (scanRAF) cancelAnimationFrame(scanRAF);
   scanRAF = null;
+  if (scanTimer) clearTimeout(scanTimer);
+  scanTimer = null;
   if (scanStream) {
     scanStream.getTracks().forEach(t => t.stop());
     scanStream = null;
@@ -1108,10 +1367,10 @@ function init() {
     if (!document.getElementById('modal-backdrop').classList.contains('hidden')) closeModal();
   });
 
-  if (!SCAN_SUPPORTED) {
+  if (!CAMERA_SUPPORTED) {
     const btn = document.getElementById('scan-btn');
     btn.disabled = true;
-    btn.title = 'Camera scanning is not supported in this browser';
+    btn.title = 'Camera access is not available in this browser';
   }
 
   document.getElementById('item-form').addEventListener('submit', e => {
