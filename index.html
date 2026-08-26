@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Diepvries Manifest</title>
+<title>Voorraad Manifest</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%8A%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -174,6 +174,34 @@
     font-weight: 500;
   }
   .summary-warn .summary-value { color: var(--warn); }
+
+  .tab-row {
+    display: flex;
+    gap: 3px;
+    background: var(--surface-2);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 18px;
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 10px 6px;
+    border: none;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--muted);
+    font-family: "Public Sans", sans-serif;
+    font-weight: 700;
+    font-size: .82rem;
+    cursor: pointer;
+    text-align: center;
+  }
+  .tab-btn.active {
+    background: var(--surface);
+    color: var(--accent);
+    box-shadow: 0 1px 3px var(--shadow);
+  }
+  .tab-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   .controls {
     display: flex;
@@ -513,10 +541,17 @@
 <div class="page">
   <div class="topbar">
     <div>
-      <p class="eyebrow">Koelhuis logboek</p>
-      <h1>Diepvries Manifest</h1>
+      <p class="eyebrow">Huishoudelijke voorraad</p>
+      <h1>Voorraad Manifest</h1>
     </div>
     <span id="status-badge" class="status-badge status-connecting">Verbinden…</span>
+  </div>
+
+  <div id="storage-tabs" class="tab-row">
+    <button type="button" class="tab-btn active" data-storage="freezer">Diepvries</button>
+    <button type="button" class="tab-btn" data-storage="fridge">IJskast</button>
+    <button type="button" class="tab-btn" data-storage="drinks">Drinken</button>
+    <button type="button" class="tab-btn" data-storage="pantry">Voorraadkast</button>
   </div>
 
   <div id="setup-banner" class="setup-banner hidden">
@@ -540,11 +575,11 @@
     </div>
     <div class="summary-card summary-oldest">
       <span class="summary-value summary-oldest-name">—</span>
-      <span class="summary-label">Nog niets ingevroren</span>
+      <span class="summary-label">Nog niets toegevoegd</span>
     </div></div>
 
   <div id="controls-root" class="controls">
-    <input id="search-input" class="search-input" type="search" placeholder="Doorzoek de vriezer…" autocomplete="off">
+    <input id="search-input" class="search-input" type="search" placeholder="Zoeken…" autocomplete="off">
     <div id="filter-chips" class="chip-row">
       <button type="button" class="filter-chip active" data-filter="all">Alles</button>
       <button type="button" class="filter-chip" data-filter="meat">Vlees & Gevogelte</button>
@@ -559,8 +594,8 @@
   </div>
 
   <main id="list-root"><div class="empty-state">
-      <p class="empty-state-title">Het vrieslogboek is leeg</p>
-      <p>Tik op "Item toevoegen" om het eerste item in de vriezer te registreren.</p>
+      <p class="empty-state-title">De diepvries is leeg</p>
+      <p>Tik op "Item toevoegen" om het eerste item in de diepvries te registreren.</p>
     </div></main>
 </div>
 
@@ -581,19 +616,30 @@
         <span>Naam</span>
         <input type="text" id="f-name" required maxlength="60" placeholder="bijv. Kippendijen">
       </label>
-      <label class="field">
-        <span>Categorie</span>
-        <select id="f-category">
-          <option value="meat">Vlees & Gevogelte</option>
-          <option value="seafood">Vis & Zeevruchten</option>
-          <option value="vegetables">Groenten</option>
-          <option value="fruit">Fruit</option>
-          <option value="bakery">Brood & Gebak</option>
-          <option value="meals">Kant-en-klaarmaaltijden</option>
-          <option value="dessert">IJs & Desserts</option>
-          <option value="other">Overig</option>
-        </select>
-      </label>
+      <div class="field-row">
+        <label class="field">
+          <span>Opslag</span>
+          <select id="f-storage">
+            <option value="freezer">Diepvries</option>
+            <option value="fridge">IJskast</option>
+            <option value="drinks">Drinken</option>
+            <option value="pantry">Voorraadkast</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Categorie</span>
+          <select id="f-category">
+            <option value="meat">Vlees & Gevogelte</option>
+            <option value="seafood">Vis & Zeevruchten</option>
+            <option value="vegetables">Groenten</option>
+            <option value="fruit">Fruit</option>
+            <option value="bakery">Brood & Gebak</option>
+            <option value="meals">Kant-en-klaarmaaltijden</option>
+            <option value="dessert">IJs & Desserts</option>
+            <option value="other">Overig</option>
+          </select>
+        </label>
+      </div>
       <div class="field-row">
         <label class="field field-qty">
           <span>Aantal</span>
@@ -616,12 +662,12 @@
         </label>
       </div>
       <label class="field">
-        <span>Locatie <em>(optioneel)</em></span>
-        <input type="text" id="f-location" maxlength="60" placeholder="bijv. Vriezer garage, bovenste plank">
+        <span>Specifieke plek <em>(optioneel)</em></span>
+        <input type="text" id="f-location" maxlength="60" placeholder="bijv. Bovenste plank, linker lade">
       </label>
       <div class="field-row">
         <label class="field">
-          <span>Ingevroren op</span>
+          <span>Toegevoegd op</span>
           <input type="date" id="f-frozen">
         </label>
         <label class="field">
@@ -702,7 +748,16 @@ const CATEGORIES = [
 ];
 const UNITS = ['pcs','lb','kg','oz','g','bag','box','container','pint','quart'];
 
+const STORAGE_AREAS = [
+  { key: 'freezer', label: 'Diepvries', empty: 'De diepvries is leeg', emptyHint: 'Tik op "Item toevoegen" om het eerste item in de diepvries te registreren.' },
+  { key: 'fridge', label: 'IJskast', empty: 'De ijskast is leeg', emptyHint: 'Tik op "Item toevoegen" om het eerste item in de ijskast te registreren.' },
+  { key: 'drinks', label: 'Drinken', empty: 'Er staat nog niets bij drinken', emptyHint: 'Tik op "Item toevoegen" om het eerste drankje te registreren.' },
+  { key: 'pantry', label: 'Voorraadkast', empty: 'De voorraadkast is leeg', emptyHint: 'Tik op "Item toevoegen" om het eerste item in de voorraadkast te registreren.' }
+];
+const DEFAULT_STORAGE = STORAGE_AREAS[0].key;
+
 let state = { items: [], catalog: {} };
+let activeStorage = DEFAULT_STORAGE;
 let isConnected = false;
 let warnedNotConfigured = false;
 let connectionStatus = { cls: 'connecting', text: 'Verbinden…' };
@@ -1007,8 +1062,8 @@ function computeSummary(items) {
   return { total, expSoon, categoriesUsed, oldest };
 }
 
-function renderSummary(state) {
-  const s = computeSummary(state.items);
+function renderSummary(items) {
+  const s = computeSummary(items);
   return '' +
     '<div class="summary-card">' +
       '<span class="summary-value">' + s.total + '</span>' +
@@ -1024,7 +1079,7 @@ function renderSummary(state) {
     '</div>' +
     '<div class="summary-card summary-oldest">' +
       '<span class="summary-value summary-oldest-name">' + (s.oldest ? escapeHtml(s.oldest.name) : '—') + '</span>' +
-      '<span class="summary-label">' + (s.oldest ? 'Eerst gebruiken · ingevroren ' + formatDate(s.oldest.frozenDate) : 'Nog niets ingevroren') + '</span>' +
+      '<span class="summary-label">' + (s.oldest ? 'Eerst gebruiken · toegevoegd ' + formatDate(s.oldest.frozenDate) : 'Nog niets toegevoegd') + '</span>' +
     '</div>';
 }
 
@@ -1036,7 +1091,7 @@ function renderItemRow(item) {
         '<p class="item-name">' + escapeHtml(item.name) + '</p>' +
         '<div class="item-meta">' +
           '<span class="chip chip-' + meta.cls + '">' + meta.text + '</span>' +
-          (item.frozenDate ? '<span class="meta-text">Ingevroren ' + formatDate(item.frozenDate) + '</span>' : '') +
+          (item.frozenDate ? '<span class="meta-text">Toegevoegd ' + formatDate(item.frozenDate) + '</span>' : '') +
           (item.location ? '<span class="meta-text">' + escapeHtml(item.location) + '</span>' : '') +
           (item.barcode ? '<span class="meta-text">#' + escapeHtml(item.barcode) + '</span>' : '') +
         '</div>' +
@@ -1059,12 +1114,12 @@ function renderItemRow(item) {
     '</article>';
 }
 
-function renderList(state) {
-  const items = state.items;
+function renderList(items) {
   if (items.length === 0) {
+    const area = STORAGE_AREAS.find(a => a.key === activeStorage) || STORAGE_AREAS[0];
     return '<div class="empty-state">' +
-      '<p class="empty-state-title">Het vrieslogboek is leeg</p>' +
-      '<p>Tik op "Item toevoegen" om het eerste item in de vriezer te registreren.</p>' +
+      '<p class="empty-state-title">' + escapeHtml(area.empty) + '</p>' +
+      '<p>' + escapeHtml(area.emptyHint) + '</p>' +
     '</div>';
   }
   const groups = CATEGORIES
@@ -1114,9 +1169,17 @@ function applyFilters() {
   });
 }
 
+function itemsInActiveStorage() {
+  return state.items.filter(i => (i.storage || DEFAULT_STORAGE) === activeStorage);
+}
+
 function render() {
-  document.getElementById('summary-root').innerHTML = renderSummary(state);
-  document.getElementById('list-root').innerHTML = renderList(state);
+  const items = itemsInActiveStorage();
+  document.querySelectorAll('#storage-tabs [data-storage]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.storage === activeStorage);
+  });
+  document.getElementById('summary-root').innerHTML = renderSummary(items);
+  document.getElementById('list-root').innerHTML = renderList(items);
   applyFilters();
   updateStatusBadge();
 }
@@ -1221,6 +1284,7 @@ async function lookupBarcode() {
     document.getElementById('f-name').value = match.name;
     document.getElementById('f-category').value = match.category;
     document.getElementById('f-unit').value = match.unit;
+    if (match.storage) document.getElementById('f-storage').value = match.storage;
     showToast('Ingevuld op basis van een eerdere scan — pas aan wat is veranderd.');
     return;
   }
@@ -1335,6 +1399,7 @@ function openModal(item) {
   document.getElementById('f-id').value = item ? item.id : '';
   document.getElementById('f-barcode').value = item ? (item.barcode || '') : '';
   document.getElementById('f-name').value = item ? item.name : '';
+  document.getElementById('f-storage').value = item ? (item.storage || DEFAULT_STORAGE) : activeStorage;
   document.getElementById('f-category').value = item ? item.category : CATEGORIES[0].key;
   document.getElementById('f-quantity').value = item ? item.quantity : 1;
   document.getElementById('f-unit').value = item ? item.unit : UNITS[0];
@@ -1376,6 +1441,13 @@ function init() {
     }
   });
 
+  document.getElementById('storage-tabs').addEventListener('click', e => {
+    const btn = e.target.closest('[data-storage]');
+    if (!btn || btn.dataset.storage === activeStorage) return;
+    activeStorage = btn.dataset.storage;
+    render();
+  });
+
   document.getElementById('search-input').addEventListener('input', applyFilters);
   document.getElementById('filter-chips').addEventListener('click', e => {
     const chip = e.target.closest('[data-filter]');
@@ -1415,6 +1487,7 @@ function init() {
       id: id || generateId(),
       barcode: barcode,
       name: name,
+      storage: document.getElementById('f-storage').value,
       category: document.getElementById('f-category').value,
       quantity: Math.max(0, parseInt(document.getElementById('f-quantity').value, 10) || 0),
       unit: document.getElementById('f-unit').value,
@@ -1425,7 +1498,7 @@ function init() {
     };
     const items = id ? state.items.map(i => i.id === id ? draft : i) : [...state.items, draft];
     const catalog = barcode
-      ? { ...state.catalog, [barcode]: { name: draft.name, category: draft.category, unit: draft.unit } }
+      ? { ...state.catalog, [barcode]: { name: draft.name, category: draft.category, unit: draft.unit, storage: draft.storage } }
       : state.catalog;
     closeModal();
     save({ items: items, catalog: catalog });
