@@ -1161,6 +1161,29 @@ function removeItem(id) {
   save({ items: state.items.filter(i => i.id !== id), catalog: state.catalog });
 }
 
+// Ordered most-specific-first: Open Food Facts' tags are crowd-sourced and
+// a product can carry several, so the first keyword match wins rather than
+// the most frequent one (e.g. a "frozen pizza" should land in meals, not
+// bakery, even though it also carries a dough/bread-adjacent tag).
+const CATEGORY_KEYWORDS = [
+  { key: 'seafood', words: ['fish', 'seafood', 'shellfish', 'shrimp', 'prawn', 'salmon', 'tuna', 'crab', 'lobster'] },
+  { key: 'dessert', words: ['ice-cream', 'ice-creams', 'sorbet', 'gelato', 'frozen-dessert', 'dessert'] },
+  { key: 'meals', words: ['pizza', 'ready-meal', 'ready-meals', 'prepared-meal', 'prepared-meals', 'meal', 'lasagna', 'dish', 'soup'] },
+  { key: 'bakery', words: ['bread', 'bakery', 'pastry', 'pastries', 'viennoiserie', 'dough'] },
+  { key: 'meat', words: ['meat', 'poultry', 'chicken', 'beef', 'pork', 'sausage', 'ham', 'turkey', 'lamb', 'bacon'] },
+  { key: 'vegetables', words: ['vegetable', 'legume', 'potato'] },
+  { key: 'fruit', words: ['fruit', 'berries', 'berry'] }
+];
+
+function guessCategory(tags) {
+  if (!tags || !tags.length) return null;
+  const joined = tags.join(' ').toLowerCase();
+  for (const entry of CATEGORY_KEYWORDS) {
+    if (entry.words.some(w => joined.indexOf(w) !== -1)) return entry.key;
+  }
+  return null;
+}
+
 // Open Food Facts is a free, keyless, crowd-sourced product database
 // covering most packaged grocery/frozen items by barcode. Used only as a
 // fallback when the barcode isn't already in this app's own catalog.
@@ -1169,14 +1192,15 @@ async function fetchProductInfo(code) {
   const timeout = setTimeout(() => controller.abort(), 8000);
   try {
     const url = 'https://world.openfoodfacts.org/api/v2/product/' + encodeURIComponent(code) +
-      '.json?fields=product_name,generic_name,brands';
+      '.json?fields=product_name,generic_name,brands,categories_tags,food_groups_tags';
     const res = await fetch(url, { signal: controller.signal });
     if (!res.ok) return null;
     const data = await res.json();
     if (!data || data.status !== 1 || !data.product) return null;
     const name = (data.product.product_name || data.product.generic_name || '').trim();
     if (!name) return null;
-    return { name: name, brands: (data.product.brands || '').trim() };
+    const category = guessCategory(data.product.categories_tags) || guessCategory(data.product.food_groups_tags);
+    return { name: name, brands: (data.product.brands || '').trim(), category: category };
   } catch (e) {
     console.error('Product lookup failed:', e);
     return null;
@@ -1210,7 +1234,10 @@ async function lookupBarcode() {
 
   if (info) {
     document.getElementById('f-name').value = info.brands ? info.name + ' — ' + info.brands : info.name;
-    showToast('Filled in from Open Food Facts — check the category and details.');
+    if (info.category) document.getElementById('f-category').value = info.category;
+    showToast(info.category
+      ? 'Filled in from Open Food Facts — check the details.'
+      : 'Filled in from Open Food Facts — pick a category and check the details.');
   } else {
     showToast("Couldn't find that product online — enter it once and it'll be remembered next time.");
   }
