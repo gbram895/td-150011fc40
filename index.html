@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="nl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Frost Manifest</title>
+<title>Diepvries Manifest</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%8A%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -513,128 +513,129 @@
 <div class="page">
   <div class="topbar">
     <div>
-      <p class="eyebrow">Cold Storage Log</p>
-      <h1>Frost Manifest</h1>
+      <p class="eyebrow">Koelhuis logboek</p>
+      <h1>Diepvries Manifest</h1>
     </div>
-    <span id="status-badge" class="status-badge status-connecting">Connecting…</span>
+    <span id="status-badge" class="status-badge status-connecting">Verbinden…</span>
   </div>
 
   <div id="setup-banner" class="setup-banner hidden">
-    <strong>Setup needed:</strong> this page isn't connected to a database yet, so nothing will
-    sync or save. Open <code>index.html</code>, find <code>FIREBASE_CONFIG</code> near the top of
-    the script, and paste in your Firebase project's config values.
+    <strong>Instellen vereist:</strong> deze pagina is nog niet verbonden met een database, dus er
+    wordt niets gesynchroniseerd of opgeslagen. Open <code>index.html</code>, zoek
+    <code>FIREBASE_CONFIG</code> bovenaan het script, en plak daar de configuratiegegevens van je
+    Firebase-project in.
   </div>
 
   <div id="summary-root" class="summary"><div class="summary-card">
       <span class="summary-value">0</span>
-      <span class="summary-label">Items logged</span>
+      <span class="summary-label">Artikelen geregistreerd</span>
     </div>
     <div class="summary-card ">
       <span class="summary-value">0</span>
-      <span class="summary-label">Use within 14 days</span>
+      <span class="summary-label">Gebruik binnen 14 dagen</span>
     </div>
     <div class="summary-card">
       <span class="summary-value">0</span>
-      <span class="summary-label">Categories in use</span>
+      <span class="summary-label">Categorieën in gebruik</span>
     </div>
     <div class="summary-card summary-oldest">
       <span class="summary-value summary-oldest-name">—</span>
-      <span class="summary-label">Nothing frozen yet</span>
+      <span class="summary-label">Nog niets ingevroren</span>
     </div></div>
 
   <div id="controls-root" class="controls">
-    <input id="search-input" class="search-input" type="search" placeholder="Search the freezer…" autocomplete="off">
+    <input id="search-input" class="search-input" type="search" placeholder="Doorzoek de vriezer…" autocomplete="off">
     <div id="filter-chips" class="chip-row">
-      <button type="button" class="filter-chip active" data-filter="all">All</button>
-      <button type="button" class="filter-chip" data-filter="meat">Meat & Poultry</button>
-      <button type="button" class="filter-chip" data-filter="seafood">Fish & Seafood</button>
-      <button type="button" class="filter-chip" data-filter="vegetables">Vegetables</button>
+      <button type="button" class="filter-chip active" data-filter="all">Alles</button>
+      <button type="button" class="filter-chip" data-filter="meat">Vlees & Gevogelte</button>
+      <button type="button" class="filter-chip" data-filter="seafood">Vis & Zeevruchten</button>
+      <button type="button" class="filter-chip" data-filter="vegetables">Groenten</button>
       <button type="button" class="filter-chip" data-filter="fruit">Fruit</button>
-      <button type="button" class="filter-chip" data-filter="bakery">Bread & Baked Goods</button>
-      <button type="button" class="filter-chip" data-filter="meals">Prepared Meals</button>
-      <button type="button" class="filter-chip" data-filter="dessert">Ice Cream & Desserts</button>
-      <button type="button" class="filter-chip" data-filter="other">Other</button>
+      <button type="button" class="filter-chip" data-filter="bakery">Brood & Gebak</button>
+      <button type="button" class="filter-chip" data-filter="meals">Kant-en-klaarmaaltijden</button>
+      <button type="button" class="filter-chip" data-filter="dessert">IJs & Desserts</button>
+      <button type="button" class="filter-chip" data-filter="other">Overig</button>
     </div>
   </div>
 
   <main id="list-root"><div class="empty-state">
-      <p class="empty-state-title">The freezer log is empty</p>
-      <p>Tap "Add item" to log the first thing in the freezer.</p>
+      <p class="empty-state-title">Het vrieslogboek is leeg</p>
+      <p>Tik op "Item toevoegen" om het eerste item in de vriezer te registreren.</p>
     </div></main>
 </div>
 
 <div id="modal-backdrop" class="modal-backdrop hidden">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-    <h2 id="modal-title">Add item</h2>
+    <h2 id="modal-title">Item toevoegen</h2>
     <form id="item-form">
       <input type="hidden" id="f-id" value="">
       <div class="field">
-        <span>Barcode <em>(optional)</em></span>
+        <span>Barcode <em>(optioneel)</em></span>
         <div class="barcode-input-row">
-          <input type="text" id="f-barcode" inputmode="numeric" pattern="[0-9]*" maxlength="14" placeholder="Scan or type the number">
-          <button type="button" id="scan-btn" class="btn-secondary btn-scan">Scan</button>
+          <input type="text" id="f-barcode" inputmode="numeric" pattern="[0-9]*" maxlength="14" placeholder="Scan of typ het nummer">
+          <button type="button" id="scan-btn" class="btn-secondary btn-scan">Scannen</button>
         </div>
-        <span class="field-hint" id="scan-hint">Point the camera at the barcode, in good light. No camera? Type the number instead.</span>
+        <span class="field-hint" id="scan-hint">Richt de camera op de barcode, in goed licht. Geen camera? Typ het nummer handmatig in.</span>
       </div>
       <label class="field">
-        <span>Name</span>
-        <input type="text" id="f-name" required maxlength="60" placeholder="e.g. Chicken thighs">
+        <span>Naam</span>
+        <input type="text" id="f-name" required maxlength="60" placeholder="bijv. Kippendijen">
       </label>
       <label class="field">
-        <span>Category</span>
+        <span>Categorie</span>
         <select id="f-category">
-          <option value="meat">Meat & Poultry</option>
-          <option value="seafood">Fish & Seafood</option>
-          <option value="vegetables">Vegetables</option>
+          <option value="meat">Vlees & Gevogelte</option>
+          <option value="seafood">Vis & Zeevruchten</option>
+          <option value="vegetables">Groenten</option>
           <option value="fruit">Fruit</option>
-          <option value="bakery">Bread & Baked Goods</option>
-          <option value="meals">Prepared Meals</option>
-          <option value="dessert">Ice Cream & Desserts</option>
-          <option value="other">Other</option>
+          <option value="bakery">Brood & Gebak</option>
+          <option value="meals">Kant-en-klaarmaaltijden</option>
+          <option value="dessert">IJs & Desserts</option>
+          <option value="other">Overig</option>
         </select>
       </label>
       <div class="field-row">
         <label class="field field-qty">
-          <span>Quantity</span>
+          <span>Aantal</span>
           <input type="number" id="f-quantity" min="0" step="1" value="1" inputmode="numeric">
         </label>
         <label class="field">
-          <span>Unit</span>
+          <span>Eenheid</span>
           <select id="f-unit">
-            <option value="pcs">pcs</option>
+            <option value="pcs">stuks</option>
             <option value="lb">lb</option>
             <option value="kg">kg</option>
             <option value="oz">oz</option>
             <option value="g">g</option>
-            <option value="bag">bag</option>
-            <option value="box">box</option>
-            <option value="container">container</option>
+            <option value="bag">zak</option>
+            <option value="box">doos</option>
+            <option value="container">bak</option>
             <option value="pint">pint</option>
             <option value="quart">quart</option>
           </select>
         </label>
       </div>
       <label class="field">
-        <span>Location <em>(optional)</em></span>
-        <input type="text" id="f-location" maxlength="60" placeholder="e.g. Garage freezer, top shelf">
+        <span>Locatie <em>(optioneel)</em></span>
+        <input type="text" id="f-location" maxlength="60" placeholder="bijv. Vriezer garage, bovenste plank">
       </label>
       <div class="field-row">
         <label class="field">
-          <span>Frozen on</span>
+          <span>Ingevroren op</span>
           <input type="date" id="f-frozen">
         </label>
         <label class="field">
-          <span>Use by <em>(optional)</em></span>
+          <span>Houdbaar tot <em>(optioneel)</em></span>
           <input type="date" id="f-expiry">
         </label>
       </div>
       <label class="field">
-        <span>Notes <em>(optional)</em></span>
-        <textarea id="f-notes" maxlength="200" rows="2" placeholder="e.g. Portioned into 4"></textarea>
+        <span>Notities <em>(optioneel)</em></span>
+        <textarea id="f-notes" maxlength="200" rows="2" placeholder="bijv. In 4 porties verdeeld"></textarea>
       </label>
       <div class="modal-actions">
-        <button type="button" id="f-cancel" class="btn-secondary">Cancel</button>
-        <button type="submit" class="btn-primary">Save item</button>
+        <button type="button" id="f-cancel" class="btn-secondary">Annuleren</button>
+        <button type="submit" class="btn-primary">Item opslaan</button>
       </div>
     </form>
   </div>
@@ -645,13 +646,13 @@
     <video id="scanner-video" playsinline autoplay muted></video>
     <div class="scanner-frame"></div>
   </div>
-  <p id="scanner-status" class="scanner-status">Point the camera at a barcode</p>
-  <button type="button" id="scanner-close" class="btn-secondary">Cancel</button>
+  <p id="scanner-status" class="scanner-status">Richt de camera op een barcode</p>
+  <button type="button" id="scanner-close" class="btn-secondary">Annuleren</button>
 </div>
 
 <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
-<button id="fab-add" class="fab" type="button">+ Add item</button>
+<button id="fab-add" class="fab" type="button">+ Item toevoegen</button>
 
 <script type="module">
 // ---------------------------------------------------------------------
@@ -690,21 +691,21 @@ if (CONFIGURED) {
 }
 
 const CATEGORIES = [
-  { key: 'meat', label: 'Meat & Poultry', hue: '#b5675f' },
-  { key: 'seafood', label: 'Fish & Seafood', hue: '#4f8fae' },
-  { key: 'vegetables', label: 'Vegetables', hue: '#5f8f5a' },
+  { key: 'meat', label: 'Vlees & Gevogelte', hue: '#b5675f' },
+  { key: 'seafood', label: 'Vis & Zeevruchten', hue: '#4f8fae' },
+  { key: 'vegetables', label: 'Groenten', hue: '#5f8f5a' },
   { key: 'fruit', label: 'Fruit', hue: '#9b6fae' },
-  { key: 'bakery', label: 'Bread & Baked Goods', hue: '#b98a4a' },
-  { key: 'meals', label: 'Prepared Meals', hue: '#4a90a4' },
-  { key: 'dessert', label: 'Ice Cream & Desserts', hue: '#c47fa0' },
-  { key: 'other', label: 'Other', hue: '#6b7f8a' }
+  { key: 'bakery', label: 'Brood & Gebak', hue: '#b98a4a' },
+  { key: 'meals', label: 'Kant-en-klaarmaaltijden', hue: '#4a90a4' },
+  { key: 'dessert', label: 'IJs & Desserts', hue: '#c47fa0' },
+  { key: 'other', label: 'Overig', hue: '#6b7f8a' }
 ];
 const UNITS = ['pcs','lb','kg','oz','g','bag','box','container','pint','quart'];
 
 let state = { items: [], catalog: {} };
 let isConnected = false;
 let warnedNotConfigured = false;
-let connectionStatus = { cls: 'connecting', text: 'Connecting…' };
+let connectionStatus = { cls: 'connecting', text: 'Verbinden…' };
 let toastTimer = null;
 
 function normalizeState(val) {
@@ -982,17 +983,17 @@ function formatDate(dateStr) {
   const opts = d.getFullYear() === now.getFullYear()
     ? { month: 'short', day: 'numeric' }
     : { month: 'short', day: 'numeric', year: 'numeric' };
-  return d.toLocaleDateString('en-US', opts);
+  return d.toLocaleDateString('nl-NL', opts);
 }
 
 function expiryMeta(item) {
-  if (!item.expiryDate) return { cls: 'neutral', text: 'No use-by date' };
+  if (!item.expiryDate) return { cls: 'neutral', text: 'Geen houdbaarheidsdatum' };
   const d = daysUntil(item.expiryDate);
-  if (d < 0) return { cls: 'critical', text: Math.abs(d) + 'd overdue' };
-  if (d === 0) return { cls: 'critical', text: 'Use today' };
-  if (d <= 3) return { cls: 'critical', text: d + 'd left' };
-  if (d <= 14) return { cls: 'warn', text: d + 'd left' };
-  return { cls: 'good', text: d + 'd left' };
+  if (d < 0) return { cls: 'critical', text: Math.abs(d) + 'd te laat' };
+  if (d === 0) return { cls: 'critical', text: 'Vandaag gebruiken' };
+  if (d <= 3) return { cls: 'critical', text: d + 'd over' };
+  if (d <= 14) return { cls: 'warn', text: d + 'd over' };
+  return { cls: 'good', text: d + 'd over' };
 }
 
 function computeSummary(items) {
@@ -1011,19 +1012,19 @@ function renderSummary(state) {
   return '' +
     '<div class="summary-card">' +
       '<span class="summary-value">' + s.total + '</span>' +
-      '<span class="summary-label">Items logged</span>' +
+      '<span class="summary-label">Artikelen geregistreerd</span>' +
     '</div>' +
     '<div class="summary-card ' + (s.expSoon > 0 ? 'summary-warn' : '') + '">' +
       '<span class="summary-value">' + s.expSoon + '</span>' +
-      '<span class="summary-label">Use within 14 days</span>' +
+      '<span class="summary-label">Gebruik binnen 14 dagen</span>' +
     '</div>' +
     '<div class="summary-card">' +
       '<span class="summary-value">' + s.categoriesUsed + '</span>' +
-      '<span class="summary-label">Categories in use</span>' +
+      '<span class="summary-label">Categorieën in gebruik</span>' +
     '</div>' +
     '<div class="summary-card summary-oldest">' +
       '<span class="summary-value summary-oldest-name">' + (s.oldest ? escapeHtml(s.oldest.name) : '—') + '</span>' +
-      '<span class="summary-label">' + (s.oldest ? 'Use first · frozen ' + formatDate(s.oldest.frozenDate) : 'Nothing frozen yet') + '</span>' +
+      '<span class="summary-label">' + (s.oldest ? 'Eerst gebruiken · ingevroren ' + formatDate(s.oldest.frozenDate) : 'Nog niets ingevroren') + '</span>' +
     '</div>';
 }
 
@@ -1035,7 +1036,7 @@ function renderItemRow(item) {
         '<p class="item-name">' + escapeHtml(item.name) + '</p>' +
         '<div class="item-meta">' +
           '<span class="chip chip-' + meta.cls + '">' + meta.text + '</span>' +
-          (item.frozenDate ? '<span class="meta-text">Frozen ' + formatDate(item.frozenDate) + '</span>' : '') +
+          (item.frozenDate ? '<span class="meta-text">Ingevroren ' + formatDate(item.frozenDate) + '</span>' : '') +
           (item.location ? '<span class="meta-text">' + escapeHtml(item.location) + '</span>' : '') +
           (item.barcode ? '<span class="meta-text">#' + escapeHtml(item.barcode) + '</span>' : '') +
         '</div>' +
@@ -1043,17 +1044,17 @@ function renderItemRow(item) {
       '</div>' +
       '<div class="item-controls">' +
         '<div class="qty-stepper">' +
-          '<button type="button" class="qty-btn" data-action="dec" aria-label="Decrease quantity">−</button>' +
+          '<button type="button" class="qty-btn" data-action="dec" aria-label="Aantal verlagen">−</button>' +
           '<span class="qty-value">' + item.quantity + ' <span class="qty-unit">' + escapeHtml(item.unit) + '</span></span>' +
-          '<button type="button" class="qty-btn" data-action="inc" aria-label="Increase quantity">+</button>' +
+          '<button type="button" class="qty-btn" data-action="inc" aria-label="Aantal verhogen">+</button>' +
         '</div>' +
-        '<button type="button" class="icon-btn" data-action="edit">Edit</button>' +
-        '<button type="button" class="icon-btn danger" data-action="delete">Remove</button>' +
+        '<button type="button" class="icon-btn" data-action="edit">Bewerken</button>' +
+        '<button type="button" class="icon-btn danger" data-action="delete">Verwijderen</button>' +
       '</div>' +
       '<div class="confirm-row hidden">' +
-        '<span>Remove ' + escapeHtml(item.name) + '?</span>' +
-        '<button type="button" class="icon-btn danger" data-action="confirm-delete">Yes, remove</button>' +
-        '<button type="button" class="icon-btn" data-action="cancel-delete">Cancel</button>' +
+        '<span>' + escapeHtml(item.name) + ' verwijderen?</span>' +
+        '<button type="button" class="icon-btn danger" data-action="confirm-delete">Ja, verwijderen</button>' +
+        '<button type="button" class="icon-btn" data-action="cancel-delete">Annuleren</button>' +
       '</div>' +
     '</article>';
 }
@@ -1062,8 +1063,8 @@ function renderList(state) {
   const items = state.items;
   if (items.length === 0) {
     return '<div class="empty-state">' +
-      '<p class="empty-state-title">The freezer log is empty</p>' +
-      '<p>Tap "Add item" to log the first thing in the freezer.</p>' +
+      '<p class="empty-state-title">Het vrieslogboek is leeg</p>' +
+      '<p>Tik op "Item toevoegen" om het eerste item in de vriezer te registreren.</p>' +
     '</div>';
   }
   const groups = CATEGORIES
@@ -1121,7 +1122,7 @@ function render() {
 }
 
 function refreshConnectionStatus() {
-  connectionStatus = isConnected ? { cls: 'live', text: 'Live' } : { cls: 'offline', text: 'Reconnecting…' };
+  connectionStatus = isConnected ? { cls: 'live', text: 'Verbonden' } : { cls: 'offline', text: 'Opnieuw verbinden…' };
   updateStatusBadge();
 }
 
@@ -1133,12 +1134,12 @@ async function save(newState) {
   if (!CONFIGURED) {
     if (!warnedNotConfigured) {
       warnedNotConfigured = true;
-      showToast('Not connected to a database — changes are not being saved.');
+      showToast('Niet verbonden met een database — wijzigingen worden niet opgeslagen.');
     }
     return;
   }
 
-  connectionStatus = { cls: 'saving', text: 'Saving…' };
+  connectionStatus = { cls: 'saving', text: 'Opslaan…' };
   updateStatusBadge();
 
   try {
@@ -1148,7 +1149,7 @@ async function save(newState) {
     console.error('Save failed:', err);
     state = prevState;
     render();
-    showToast('Could not save — check your connection and try again.');
+    showToast('Opslaan mislukt — controleer je verbinding en probeer het opnieuw.');
   }
 }
 
@@ -1220,12 +1221,12 @@ async function lookupBarcode() {
     document.getElementById('f-name').value = match.name;
     document.getElementById('f-category').value = match.category;
     document.getElementById('f-unit').value = match.unit;
-    showToast('Filled in from a previous scan — edit anything that changed.');
+    showToast('Ingevuld op basis van een eerdere scan — pas aan wat is veranderd.');
     return;
   }
 
   const myToken = ++lookupToken;
-  showToast('Looking up product…');
+  showToast('Product opzoeken…');
   const info = await fetchProductInfo(code);
   // If the user changed the barcode field (or opened another item) while
   // this lookup was in flight, its result is stale — drop it.
@@ -1236,23 +1237,23 @@ async function lookupBarcode() {
     document.getElementById('f-name').value = info.brands ? info.name + ' — ' + info.brands : info.name;
     if (info.category) document.getElementById('f-category').value = info.category;
     showToast(info.category
-      ? 'Filled in from Open Food Facts — check the details.'
-      : 'Filled in from Open Food Facts — pick a category and check the details.');
+      ? 'Ingevuld via Open Food Facts — controleer de gegevens.'
+      : 'Ingevuld via Open Food Facts — kies een categorie en controleer de gegevens.');
   } else {
-    showToast("Couldn't find that product online — enter it once and it'll be remembered next time.");
+    showToast('Product niet online gevonden — voer het één keer in, dan wordt het de volgende keer onthouden.');
   }
 }
 
 async function openScanner() {
   if (!CAMERA_SUPPORTED) {
-    showToast('Camera access is not available in this browser — enter the barcode number instead.');
+    showToast('Camera-toegang is niet beschikbaar in deze browser — voer het barcodenummer handmatig in.');
     return;
   }
   const backdrop = document.getElementById('scanner-backdrop');
   const video = document.getElementById('scanner-video');
   const status = document.getElementById('scanner-status');
   backdrop.classList.remove('hidden');
-  status.textContent = 'Starting camera…';
+  status.textContent = 'Camera starten…';
   try {
     if (NATIVE_DETECTOR_SUPPORTED && !barcodeDetector) {
       let formats = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'];
@@ -1267,13 +1268,13 @@ async function openScanner() {
     scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
     video.srcObject = scanStream;
     await video.play();
-    status.textContent = 'Hold the barcode level, filling the frame';
+    status.textContent = 'Houd de barcode recht, zodat deze het kader vult';
     scanLoop(video, status);
   } catch (err) {
     const name = (err && err.name) || 'UnknownError';
     const msg = (err && err.message) || '';
     console.error('Camera access failed:', name, msg, err);
-    status.textContent = 'Could not access the camera (' + name + ') — enter the barcode number instead.';
+    status.textContent = 'Kon geen toegang krijgen tot de camera (' + name + ') — voer het barcodenummer handmatig in.';
   }
 }
 
@@ -1330,7 +1331,7 @@ function closeScanner() {
 function openModal(item) {
   const form = document.getElementById('item-form');
   form.reset();
-  document.getElementById('modal-title').textContent = item ? 'Edit item' : 'Add item';
+  document.getElementById('modal-title').textContent = item ? 'Item bewerken' : 'Item toevoegen';
   document.getElementById('f-id').value = item ? item.id : '';
   document.getElementById('f-barcode').value = item ? (item.barcode || '') : '';
   document.getElementById('f-name').value = item ? item.name : '';
@@ -1401,7 +1402,7 @@ function init() {
   if (!CAMERA_SUPPORTED) {
     const btn = document.getElementById('scan-btn');
     btn.disabled = true;
-    btn.title = 'Camera access is not available in this browser';
+    btn.title = 'Camera-toegang is niet beschikbaar in deze browser';
   }
 
   document.getElementById('item-form').addEventListener('submit', e => {
@@ -1434,7 +1435,7 @@ function init() {
 
   if (!CONFIGURED) {
     document.getElementById('setup-banner').classList.remove('hidden');
-    connectionStatus = { cls: 'offline', text: 'Not configured' };
+    connectionStatus = { cls: 'offline', text: 'Niet geconfigureerd' };
     updateStatusBadge();
     return;
   }
@@ -1444,7 +1445,7 @@ function init() {
     render();
   }, err => {
     console.error('Database read failed:', err);
-    connectionStatus = { cls: 'offline', text: 'Sync error' };
+    connectionStatus = { cls: 'offline', text: 'Synchronisatiefout' };
     updateStatusBadge();
   });
 
