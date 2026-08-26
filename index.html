@@ -1161,14 +1161,59 @@ function removeItem(id) {
   save({ items: state.items.filter(i => i.id !== id), catalog: state.catalog });
 }
 
-function lookupCatalog() {
+// Open Food Facts is a free, keyless, crowd-sourced product database
+// covering most packaged grocery/frozen items by barcode. Used only as a
+// fallback when the barcode isn't already in this app's own catalog.
+async function fetchProductInfo(code) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const url = 'https://world.openfoodfacts.org/api/v2/product/' + encodeURIComponent(code) +
+      '.json?fields=product_name,generic_name,brands';
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data || data.status !== 1 || !data.product) return null;
+    const name = (data.product.product_name || data.product.generic_name || '').trim();
+    if (!name) return null;
+    return { name: name, brands: (data.product.brands || '').trim() };
+  } catch (e) {
+    console.error('Product lookup failed:', e);
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+let lookupToken = 0;
+
+async function lookupBarcode() {
   const code = document.getElementById('f-barcode').value.trim();
-  if (!code || !state.catalog[code]) return;
+  if (!code) return;
+
   const match = state.catalog[code];
-  document.getElementById('f-name').value = match.name;
-  document.getElementById('f-category').value = match.category;
-  document.getElementById('f-unit').value = match.unit;
-  showToast('Filled in from a previous scan — edit anything that changed.');
+  if (match) {
+    document.getElementById('f-name').value = match.name;
+    document.getElementById('f-category').value = match.category;
+    document.getElementById('f-unit').value = match.unit;
+    showToast('Filled in from a previous scan — edit anything that changed.');
+    return;
+  }
+
+  const myToken = ++lookupToken;
+  showToast('Looking up product…');
+  const info = await fetchProductInfo(code);
+  // If the user changed the barcode field (or opened another item) while
+  // this lookup was in flight, its result is stale — drop it.
+  if (myToken !== lookupToken) return;
+  if (document.getElementById('f-barcode').value.trim() !== code) return;
+
+  if (info) {
+    document.getElementById('f-name').value = info.brands ? info.name + ' — ' + info.brands : info.name;
+    showToast('Filled in from Open Food Facts — check the category and details.');
+  } else {
+    showToast("Couldn't find that product online — enter it once and it'll be remembered next time.");
+  }
 }
 
 async function openScanner() {
@@ -1209,7 +1254,7 @@ function onBarcodeFound(value) {
   closeScanner();
   if (navigator.vibrate) navigator.vibrate(80);
   document.getElementById('f-barcode').value = value;
-  lookupCatalog();
+  lookupBarcode();
 }
 
 function scanLoop(video, status) {
@@ -1317,7 +1362,7 @@ function init() {
   document.getElementById('modal-backdrop').addEventListener('click', e => {
     if (e.target.id === 'modal-backdrop') closeModal();
   });
-  document.getElementById('f-barcode').addEventListener('change', lookupCatalog);
+  document.getElementById('f-barcode').addEventListener('change', lookupBarcode);
   document.getElementById('scan-btn').addEventListener('click', openScanner);
   document.getElementById('scanner-close').addEventListener('click', closeScanner);
   document.addEventListener('keydown', e => {
