@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Frost Manifest</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%8A%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
@@ -131,6 +130,7 @@
   .status-live { color: var(--good); border-color: color-mix(in srgb, var(--good) 35%, var(--border)); }
   .status-saving::before { background: var(--warn); animation: pulse 1s ease-in-out infinite; }
   .status-saving { color: var(--warn); }
+  .status-readonly::before { background: var(--muted); }
   .status-offline::before { background: var(--critical); }
   .status-offline { color: var(--critical); }
   .status-connecting::before { background: var(--muted); animation: pulse 1s ease-in-out infinite; }
@@ -367,23 +367,11 @@
   .fab:active { transform: scale(.97); }
   .fab:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
 
-  .setup-banner {
-    background: var(--warn-soft);
-    border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--border));
-    border-radius: 10px;
-    padding: 14px 16px;
-    margin-bottom: 18px;
-    font-size: .84rem;
-    line-height: 1.5;
-  }
-  .setup-banner.hidden { display: none; }
-  .setup-banner strong { color: var(--warn); }
-  .setup-banner code {
-    font-family: "IBM Plex Mono", monospace;
-    background: var(--surface-2);
-    padding: 1px 5px;
-    border-radius: 4px;
-    font-size: .82em;
+  body.read-only .fab { display: none; }
+  body.read-only .qty-btn,
+  body.read-only .item-controls .icon-btn {
+    opacity: .35;
+    pointer-events: none;
   }
 
   .modal-backdrop {
@@ -519,12 +507,6 @@
     <span id="status-badge" class="status-badge status-connecting">Connecting…</span>
   </div>
 
-  <div id="setup-banner" class="setup-banner hidden">
-    <strong>Setup needed:</strong> this page isn't connected to a database yet, so nothing will
-    sync or save. Open <code>index.html</code>, find <code>FIREBASE_CONFIG</code> near the top of
-    the script, and paste in your Firebase project's config values.
-  </div>
-
   <div id="summary-root" class="summary"><div class="summary-card">
       <span class="summary-value">0</span>
       <span class="summary-label">Items logged</span>
@@ -653,41 +635,10 @@
 
 <button id="fab-add" class="fab" type="button">+ Add item</button>
 
-<script type="module">
-// ---------------------------------------------------------------------
-// SETUP: create a free project at https://console.firebase.google.com,
-// add a Web App to it (no need for Firebase Hosting), enable
-// "Realtime Database" (not Firestore) in the console, then paste the
-// config object it gives you here. These values are not secret — Firebase
-// secures access through the database's Rules, not by hiding this config
-// — but note this file (and therefore this config) is public if this repo
-// is public, so anyone could read/write your database directly via
-// Firebase's API, bypassing this page. That's an accepted tradeoff for a
-// simple household tool with no login; use Realtime Database Rules like:
-//   { "rules": { "state": { ".read": true, ".write": true } } }
-// (scopes the open access to just this app's data path, nothing else).
-// ---------------------------------------------------------------------
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
-
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyC5eB7SrjqcH-aMQBhnFRQ9c0IhruL3J7Q",
-  authDomain: "frost-manifest.firebaseapp.com",
-  databaseURL: "https://frost-manifest-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "frost-manifest",
-  storageBucket: "frost-manifest.firebasestorage.app",
-  messagingSenderId: "267156223972",
-  appId: "1:267156223972:web:4d1ccf04b8ee786195b9f1"
-};
-const CONFIGURED = FIREBASE_CONFIG.apiKey.indexOf('REPLACE_WITH') === -1;
-
-let db = null, stateRef = null, connectedRef = null;
-if (CONFIGURED) {
-  const firebaseApp = initializeApp(FIREBASE_CONFIG);
-  db = getDatabase(firebaseApp);
-  stateRef = ref(db, 'state');
-  connectedRef = ref(db, '.info/connected');
-}
+<script id="state-data-holder" type="application/json">{"items":[],"catalog":{}}</script>
+<script>
+const SCRIPT_EL = document.currentScript;
+const HEAD_HTML = document.head.outerHTML;
 
 const CATEGORIES = [
   { key: 'meat', label: 'Meat & Poultry', hue: '#b5675f' },
@@ -700,17 +651,15 @@ const CATEGORIES = [
   { key: 'other', label: 'Other', hue: '#6b7f8a' }
 ];
 const UNITS = ['pcs','lb','kg','oz','g','bag','box','container','pint','quart'];
+const READ_ONLY_CODES = ['not_writer','not_granted','not_declared','capability_disabled','capability_removed'];
 
-let state = { items: [], catalog: {} };
-let isConnected = false;
-let warnedNotConfigured = false;
+let state = JSON.parse(document.getElementById('state-data-holder').textContent);
+state.catalog = state.catalog || {};
+let artifactApi = null;
+let readOnly = false;
+let warnedOffline = false;
 let connectionStatus = { cls: 'connecting', text: 'Connecting…' };
 let toastTimer = null;
-
-function normalizeState(val) {
-  if (!val) return { items: [], catalog: {} };
-  return { items: Array.isArray(val.items) ? val.items : [], catalog: val.catalog || {} };
-}
 let scanStream = null;
 let scanRAF = null;
 let scanTimer = null;
@@ -1083,6 +1032,80 @@ function renderList(state) {
   }).join('');
 }
 
+function renderBody(state) {
+  return '' +
+  '<div class="page">' +
+    '<div class="topbar">' +
+      '<div>' +
+        '<p class="eyebrow">Cold Storage Log</p>' +
+        '<h1>Frost Manifest</h1>' +
+      '</div>' +
+      '<span id="status-badge" class="status-badge status-connecting">Connecting…</span>' +
+    '</div>' +
+    '<div id="summary-root" class="summary">' + renderSummary(state) + '</div>' +
+    '<div id="controls-root" class="controls">' +
+      '<input id="search-input" class="search-input" type="search" placeholder="Search the freezer…" autocomplete="off">' +
+      '<div id="filter-chips" class="chip-row">' +
+        '<button type="button" class="filter-chip active" data-filter="all">All</button>' +
+        CATEGORIES.map(c => '<button type="button" class="filter-chip" data-filter="' + c.key + '">' + escapeHtml(c.label) + '</button>').join('') +
+      '</div>' +
+    '</div>' +
+    '<main id="list-root">' + renderList(state) + '</main>' +
+  '</div>' +
+  '<div id="modal-backdrop" class="modal-backdrop hidden">' +
+    '<div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">' +
+      '<h2 id="modal-title">Add item</h2>' +
+      '<form id="item-form">' +
+        '<input type="hidden" id="f-id" value="">' +
+        '<div class="field"><span>Barcode <em>(optional)</em></span>' +
+          '<div class="barcode-input-row">' +
+            '<input type="text" id="f-barcode" inputmode="numeric" pattern="[0-9]*" maxlength="14" placeholder="Scan or type the number">' +
+            '<button type="button" id="scan-btn" class="btn-secondary btn-scan">Scan</button>' +
+          '</div>' +
+          '<span class="field-hint" id="scan-hint">Point the camera at the barcode, in good light. No camera? Type the number instead.</span>' +
+        '</div>' +
+        '<label class="field"><span>Name</span><input type="text" id="f-name" required maxlength="60" placeholder="e.g. Chicken thighs"></label>' +
+        '<label class="field"><span>Category</span><select id="f-category">' +
+          CATEGORIES.map(c => '<option value="' + c.key + '">' + escapeHtml(c.label) + '</option>').join('') +
+        '</select></label>' +
+        '<div class="field-row">' +
+          '<label class="field field-qty"><span>Quantity</span><input type="number" id="f-quantity" min="0" step="1" value="1" inputmode="numeric"></label>' +
+          '<label class="field"><span>Unit</span><select id="f-unit">' + UNITS.map(u => '<option value="' + u + '">' + u + '</option>').join('') + '</select></label>' +
+        '</div>' +
+        '<label class="field"><span>Location <em>(optional)</em></span><input type="text" id="f-location" maxlength="60" placeholder="e.g. Garage freezer, top shelf"></label>' +
+        '<div class="field-row">' +
+          '<label class="field"><span>Frozen on</span><input type="date" id="f-frozen"></label>' +
+          '<label class="field"><span>Use by <em>(optional)</em></span><input type="date" id="f-expiry"></label>' +
+        '</div>' +
+        '<label class="field"><span>Notes <em>(optional)</em></span><textarea id="f-notes" maxlength="200" rows="2" placeholder="e.g. Portioned into 4"></textarea></label>' +
+        '<div class="modal-actions">' +
+          '<button type="button" id="f-cancel" class="btn-secondary">Cancel</button>' +
+          '<button type="submit" class="btn-primary">Save item</button>' +
+        '</div>' +
+      '</form>' +
+    '</div>' +
+  '</div>' +
+  '<div id="scanner-backdrop" class="scanner-backdrop hidden">' +
+    '<div class="scanner-box">' +
+      '<video id="scanner-video" playsinline autoplay muted></video>' +
+      '<div class="scanner-frame"></div>' +
+    '</div>' +
+    '<p id="scanner-status" class="scanner-status">Point the camera at a barcode</p>' +
+    '<button type="button" id="scanner-close" class="btn-secondary">Cancel</button>' +
+  '</div>' +
+  '<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>' +
+  '<button id="fab-add" class="fab" type="button">+ Add item</button>';
+}
+
+function buildDocument(state) {
+  const json = JSON.stringify(state).replace(/</g, '\\u003c');
+  return '<!doctype html>\n<html lang="en">\n' + HEAD_HTML + '\n<body>\n' +
+    renderBody(state) +
+    '\n<script id="state-data-holder" type="application/json">' + json + '<' + '/script>\n' +
+    SCRIPT_EL.outerHTML +
+    '\n</body>\n</html>';
+}
+
 function updateStatusBadge() {
   const el = document.getElementById('status-badge');
   if (!el) return;
@@ -1120,9 +1143,13 @@ function render() {
   updateStatusBadge();
 }
 
-function refreshConnectionStatus() {
-  connectionStatus = isConnected ? { cls: 'live', text: 'Live' } : { cls: 'offline', text: 'Reconnecting…' };
+function enterReadOnly() {
+  if (readOnly) return;
+  readOnly = true;
+  connectionStatus = { cls: 'readonly', text: 'Read-only' };
   updateStatusBadge();
+  document.body.classList.add('read-only');
+  showToast('You have view-only access to this freezer log.');
 }
 
 async function save(newState) {
@@ -1130,10 +1157,10 @@ async function save(newState) {
   state = newState;
   render();
 
-  if (!CONFIGURED) {
-    if (!warnedNotConfigured) {
-      warnedNotConfigured = true;
-      showToast('Not connected to a database — changes are not being saved.');
+  if (!artifactApi) {
+    if (!warnedOffline) {
+      warnedOffline = true;
+      showToast('Not connected — changes are not being saved.');
     }
     return;
   }
@@ -1142,108 +1169,51 @@ async function save(newState) {
   updateStatusBadge();
 
   try {
-    await set(stateRef, newState);
-    refreshConnectionStatus();
+    await artifactApi.publish(buildDocument(state));
+    connectionStatus = { cls: 'live', text: 'Live' };
+    updateStatusBadge();
   } catch (err) {
-    console.error('Save failed:', err);
-    state = prevState;
-    render();
-    showToast('Could not save — check your connection and try again.');
+    const code = err && err.code;
+    if (code === 'conflict') {
+      connectionStatus = { cls: 'live', text: 'Live' };
+      updateStatusBadge();
+    } else if (READ_ONLY_CODES.indexOf(code) !== -1) {
+      state = prevState;
+      render();
+      enterReadOnly();
+    } else {
+      state = prevState;
+      render();
+      connectionStatus = { cls: 'live', text: 'Live' };
+      updateStatusBadge();
+      showToast('Could not save — please try again.');
+    }
   }
 }
 
 function changeQty(item, delta) {
+  if (readOnly) return;
   const next = Math.max(0, item.quantity + delta);
   save({ items: state.items.map(i => i.id === item.id ? { ...i, quantity: next } : i), catalog: state.catalog });
 }
 
 function removeItem(id) {
+  if (readOnly) return;
   save({ items: state.items.filter(i => i.id !== id), catalog: state.catalog });
 }
 
-// Ordered most-specific-first: Open Food Facts' tags are crowd-sourced and
-// a product can carry several, so the first keyword match wins rather than
-// the most frequent one (e.g. a "frozen pizza" should land in meals, not
-// bakery, even though it also carries a dough/bread-adjacent tag).
-const CATEGORY_KEYWORDS = [
-  { key: 'seafood', words: ['fish', 'seafood', 'shellfish', 'shrimp', 'prawn', 'salmon', 'tuna', 'crab', 'lobster'] },
-  { key: 'dessert', words: ['ice-cream', 'ice-creams', 'sorbet', 'gelato', 'frozen-dessert', 'dessert'] },
-  { key: 'meals', words: ['pizza', 'ready-meal', 'ready-meals', 'prepared-meal', 'prepared-meals', 'meal', 'lasagna', 'dish', 'soup'] },
-  { key: 'bakery', words: ['bread', 'bakery', 'pastry', 'pastries', 'viennoiserie', 'dough'] },
-  { key: 'meat', words: ['meat', 'poultry', 'chicken', 'beef', 'pork', 'sausage', 'ham', 'turkey', 'lamb', 'bacon'] },
-  { key: 'vegetables', words: ['vegetable', 'legume', 'potato'] },
-  { key: 'fruit', words: ['fruit', 'berries', 'berry'] }
-];
-
-function guessCategory(tags) {
-  if (!tags || !tags.length) return null;
-  const joined = tags.join(' ').toLowerCase();
-  for (const entry of CATEGORY_KEYWORDS) {
-    if (entry.words.some(w => joined.indexOf(w) !== -1)) return entry.key;
-  }
-  return null;
-}
-
-// Open Food Facts is a free, keyless, crowd-sourced product database
-// covering most packaged grocery/frozen items by barcode. Used only as a
-// fallback when the barcode isn't already in this app's own catalog.
-async function fetchProductInfo(code) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
-  try {
-    const url = 'https://world.openfoodfacts.org/api/v2/product/' + encodeURIComponent(code) +
-      '.json?fields=product_name,generic_name,brands,categories_tags,food_groups_tags';
-    const res = await fetch(url, { signal: controller.signal });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!data || data.status !== 1 || !data.product) return null;
-    const name = (data.product.product_name || data.product.generic_name || '').trim();
-    if (!name) return null;
-    const category = guessCategory(data.product.categories_tags) || guessCategory(data.product.food_groups_tags);
-    return { name: name, brands: (data.product.brands || '').trim(), category: category };
-  } catch (e) {
-    console.error('Product lookup failed:', e);
-    return null;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-let lookupToken = 0;
-
-async function lookupBarcode() {
+function lookupCatalog() {
   const code = document.getElementById('f-barcode').value.trim();
-  if (!code) return;
-
+  if (!code || !state.catalog[code]) return;
   const match = state.catalog[code];
-  if (match) {
-    document.getElementById('f-name').value = match.name;
-    document.getElementById('f-category').value = match.category;
-    document.getElementById('f-unit').value = match.unit;
-    showToast('Filled in from a previous scan — edit anything that changed.');
-    return;
-  }
-
-  const myToken = ++lookupToken;
-  showToast('Looking up product…');
-  const info = await fetchProductInfo(code);
-  // If the user changed the barcode field (or opened another item) while
-  // this lookup was in flight, its result is stale — drop it.
-  if (myToken !== lookupToken) return;
-  if (document.getElementById('f-barcode').value.trim() !== code) return;
-
-  if (info) {
-    document.getElementById('f-name').value = info.brands ? info.name + ' — ' + info.brands : info.name;
-    if (info.category) document.getElementById('f-category').value = info.category;
-    showToast(info.category
-      ? 'Filled in from Open Food Facts — check the details.'
-      : 'Filled in from Open Food Facts — pick a category and check the details.');
-  } else {
-    showToast("Couldn't find that product online — enter it once and it'll be remembered next time.");
-  }
+  document.getElementById('f-name').value = match.name;
+  document.getElementById('f-category').value = match.category;
+  document.getElementById('f-unit').value = match.unit;
+  showToast('Filled in from a previous scan — edit anything that changed.');
 }
 
 async function openScanner() {
+  if (readOnly) return;
   if (!CAMERA_SUPPORTED) {
     showToast('Camera access is not available in this browser — enter the barcode number instead.');
     return;
@@ -1281,7 +1251,7 @@ function onBarcodeFound(value) {
   closeScanner();
   if (navigator.vibrate) navigator.vibrate(80);
   document.getElementById('f-barcode').value = value;
-  lookupBarcode();
+  lookupCatalog();
 }
 
 function scanLoop(video, status) {
@@ -1328,6 +1298,7 @@ function closeScanner() {
 }
 
 function openModal(item) {
+  if (readOnly) return;
   const form = document.getElementById('item-form');
   form.reset();
   document.getElementById('modal-title').textContent = item ? 'Edit item' : 'Add item';
@@ -1365,6 +1336,7 @@ function init() {
     else if (action === 'dec') changeQty(item, -1);
     else if (action === 'edit') openModal(item);
     else if (action === 'delete') {
+      if (readOnly) return;
       row.querySelector('.item-controls').classList.add('hidden');
       row.querySelector('.confirm-row').classList.remove('hidden');
     } else if (action === 'cancel-delete') {
@@ -1389,7 +1361,7 @@ function init() {
   document.getElementById('modal-backdrop').addEventListener('click', e => {
     if (e.target.id === 'modal-backdrop') closeModal();
   });
-  document.getElementById('f-barcode').addEventListener('change', lookupBarcode);
+  document.getElementById('f-barcode').addEventListener('change', lookupCatalog);
   document.getElementById('scan-btn').addEventListener('click', openScanner);
   document.getElementById('scanner-close').addEventListener('click', closeScanner);
   document.addEventListener('keydown', e => {
@@ -1432,26 +1404,24 @@ function init() {
 
   updateStatusBadge();
 
-  if (!CONFIGURED) {
-    document.getElementById('setup-banner').classList.remove('hidden');
-    connectionStatus = { cls: 'offline', text: 'Not configured' };
+  if (typeof claude !== 'undefined' && claude.use) {
+    claude.use('artifact').then(api => {
+      if (!api) {
+        connectionStatus = { cls: 'offline', text: 'Not connected' };
+        updateStatusBadge();
+        return;
+      }
+      artifactApi = api;
+      connectionStatus = { cls: 'live', text: 'Live' };
+      updateStatusBadge();
+    }).catch(() => {
+      connectionStatus = { cls: 'offline', text: 'Not connected' };
+      updateStatusBadge();
+    });
+  } else {
+    connectionStatus = { cls: 'offline', text: 'Not connected' };
     updateStatusBadge();
-    return;
   }
-
-  onValue(stateRef, snapshot => {
-    state = normalizeState(snapshot.val());
-    render();
-  }, err => {
-    console.error('Database read failed:', err);
-    connectionStatus = { cls: 'offline', text: 'Sync error' };
-    updateStatusBadge();
-  });
-
-  onValue(connectedRef, snapshot => {
-    isConnected = snapshot.val() === true;
-    refreshConnectionStatus();
-  });
 }
 
 document.addEventListener('DOMContentLoaded', init);
